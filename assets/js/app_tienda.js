@@ -379,6 +379,14 @@ function inicializarDropdownCategorias() {
         categoriaActiva = idCategoria;
         cargarCatalogoPorCategoria(idCategoria);
 
+        // Si se elige una categoría estando en el detalle de un producto,
+        // primero se vuelve a la vista del catálogo (el cambio de hash
+        // dispara el router, que también baja a la sección).
+        if (window.location.hash.startsWith('#producto')) {
+            window.location.hash = 'catalogo';
+            return;
+        }
+
         document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' });
     });
 }
@@ -495,6 +503,9 @@ function inicializarFiltrosCategorias() {
  * "vista-*" del HTML.
  *
  * @param {string} idVista - 'vista-catalogo' o 'vista-producto'
+ * @param {boolean} desplazarArriba - si es false, no se sube al inicio
+ *   de la página (lo usa el catálogo cuando se llega con #catalogo y
+ *   el scroll lo decide la propia ruta).
  */
 // Referencia al intervalo de reintento de mostrarVistaProducto, para
 // poder cancelarlo si el usuario navega a otra vista antes de que
@@ -502,7 +513,7 @@ function inicializarFiltrosCategorias() {
 // ejecutándose en segundo plano indefinidamente).
 let intervaloReintentoProducto = null;
 
-function mostrarVista(idVista) {
+function mostrarVista(idVista, desplazarArriba = true) {
     // Cualquier cambio de vista cancela un reintento pendiente de
     // mostrarVistaProducto, sin importar hacia dónde se navegue.
     if (intervaloReintentoProducto !== null) {
@@ -516,11 +527,24 @@ function mostrarVista(idVista) {
 
     // Al cambiar de vista, se regresa el scroll al inicio — igual
     // que se esperaría al "abrir otra página".
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (desplazarArriba) {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }
 }
 
+/**
+ * Ruta "catalogo". Con el hash exacto #catalogo (botón "Explorar
+ * catálogo", enlace móvil o "Volver al catálogo") se baja a la
+ * sección de productos; sin hash se muestra la página desde arriba.
+ */
 function mostrarVistaCatalogo() {
-    mostrarVista('vista-catalogo');
+    const irASeccionCatalogo = window.location.hash === '#catalogo';
+
+    mostrarVista('vista-catalogo', !irASeccionCatalogo);
+
+    if (irASeccionCatalogo) {
+        document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 /**
