@@ -1,0 +1,791 @@
+/**
+ * estilos.css
+ *
+ * Sistema de diseño de la tienda de electrónica.
+ * Proyecto: Sistema Integral E-Commerce y Gestión de Inventario
+ *
+ * Arquitectura del archivo (documentada para quien lo edite después):
+ *
+ * 1. VARIABLES GLOBALES (Custom Properties en :root)
+ *    Centralizan color, tipografía, espaciado y sombras. Cualquier
+ *    rediseño de paleta se hace SOLO aquí — el resto del archivo
+ *    consume estas variables con var(), nunca valores sueltos.
+ *
+ * 2. BASE
+ *    Reset ligero y estilos de elementos HTML puros (body, enlaces).
+ *
+ * 3. COMPONENTES OOCSS (botones, badges, tarjetas genéricas)
+ *    Clase base = estructura (padding, tamaño, radio).
+ *    Clase modificadora = apariencia (color, fondo).
+ *    Se combinan: <button class="btn-base btn-base--primario">
+ *
+ * 4. COMPONENTES BEM (específicos de este proyecto)
+ *    Bloque__elemento--modificador. Usados para las piezas que no
+ *    son genéricas de cualquier sitio (navbar de la tienda, tarjeta
+ *    de producto, renglón de carrito). Facilita ubicar en este
+ *    archivo el CSS de una pieza concreta de la interfaz.
+ *
+ * No se usa Sass/SCSS: el Documento Maestro exige Vanilla JS y
+ * Bootstrap vía CDN sin paso de compilación, así que todo aquí es
+ * CSS3 nativo que el navegador interpreta directamente.
+ */
+
+
+/* =============================================================
+ * 1. VARIABLES GLOBALES
+ * ============================================================= */
+
+:root {
+    /* --- Paleta: oscura / tech --- */
+    --color-fondo: #0b0e14;
+    --color-fondo-elevado: #131722;
+    --color-fondo-tarjeta: #171c28;
+    --color-borde: #262d3d;
+    --color-borde-hover: #38445c;
+
+    --color-texto: #e6e9f0;
+    --color-texto-tenue: #9aa3b8;
+    --color-texto-apagado: #6b7488;
+
+    /* Acento eléctrico: usado con moderación (CTAs, precios, focos) */
+    --color-acento: #4d7fff;
+    --color-acento-hover: #6e97ff;
+    --color-acento-texto-sobre: #ffffff;
+
+    /* Acento secundario (neón cian), solo para detalles puntuales */
+    --color-acento-2: #35e0c8;
+
+    --color-exito: #35c980;
+    --color-advertencia: #f5b342;
+    --color-peligro: #ff5d6c;
+
+    /* --- Tipografía --- */
+    --fuente-titulos: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --fuente-cuerpo: 'Inter', 'Segoe UI', sans-serif;
+
+    /* --- Espaciado (escala base 4px) --- */
+    --espacio-1: 4px;
+    --espacio-2: 8px;
+    --espacio-3: 12px;
+    --espacio-4: 16px;
+    --espacio-5: 24px;
+    --espacio-6: 32px;
+    --espacio-7: 48px;
+
+    /* --- Radios y sombras --- */
+    --radio-sm: 6px;
+    --radio-md: 10px;
+    --radio-lg: 16px;
+
+    --sombra-tarjeta: 0 2px 12px rgba(0, 0, 0, 0.35);
+    --sombra-elevada: 0 8px 30px rgba(0, 0, 0, 0.5);
+    --sombra-acento: 0 0 0 3px rgba(77, 127, 255, 0.25);
+
+    --transicion-rapida: 150ms ease;
+    --transicion-media: 250ms ease;
+}
+
+
+/* =============================================================
+ * 2. BASE
+ * ============================================================= */
+
+body {
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+    font-family: var(--fuente-cuerpo);
+}
+
+h1, h2, h3, h4, h5, h6,
+.navbar-brand {
+    font-family: var(--fuente-titulos);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+a {
+    color: var(--color-acento);
+}
+
+a:hover {
+    color: var(--color-acento-hover);
+}
+
+/* Bootstrap trae fondos claros por defecto en varios componentes;
+   se sobreescriben aquí en vez de pelear con !important disperso. */
+
+.bg-body-tertiary {
+    background-color: var(--color-fondo) !important;
+}
+
+.navbar-dark.bg-dark {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    background-color: rgba(19, 23, 34, 0.7) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* --- Navbar flotante tipo píldora (solo tienda pública) ---
+   Separada de .navbar-dark.bg-dark para no afectar admin.html,
+   que conserva la barra sólida de ancho completo. */
+
+.navbar-flotante {
+    position: sticky;
+    top: var(--espacio-4);
+    z-index: 1030;
+    margin: var(--espacio-4) auto;
+    max-width: 1200px;
+    background-color: rgba(19, 23, 34, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    box-shadow: var(--sombra-elevada);
+    padding: var(--espacio-2) var(--espacio-5);
+}
+
+.navbar-flotante .navbar-brand {
+    font-size: 1.1rem;
+}
+
+/* Enlaces centrales (Home / Productos / Soporte) */
+.navbar-flotante__enlace {
+    color: var(--color-texto-tenue);
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: var(--espacio-2) var(--espacio-3);
+    border-radius: 999px;
+    transition: color var(--transicion-rapida), background-color var(--transicion-rapida);
+    text-decoration: none;
+}
+
+.navbar-flotante__enlace:hover,
+.navbar-flotante__enlace:focus {
+    color: var(--color-texto);
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.navbar-flotante__enlace.active {
+    color: var(--color-texto);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Íconos de acción (buscar, cuenta, carrito) */
+.navbar-flotante__icono {
+    color: var(--color-texto-tenue);
+    font-size: 1.1rem;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: color var(--transicion-rapida), background-color var(--transicion-rapida);
+    background: none;
+    border: none;
+}
+
+.navbar-flotante__icono:hover {
+    color: var(--color-texto);
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Dropdown de categorías dentro de "Productos" */
+.navbar-flotante .dropdown-menu {
+    background-color: var(--color-fondo-tarjeta);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-md);
+    padding: var(--espacio-2);
+    box-shadow: var(--sombra-elevada);
+}
+
+.navbar-flotante .dropdown-item {
+    color: var(--color-texto-tenue);
+    border-radius: var(--radio-sm);
+    font-size: 0.9rem;
+    padding: var(--espacio-2) var(--espacio-3);
+}
+
+.navbar-flotante .dropdown-item:hover,
+.navbar-flotante .dropdown-item:focus {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: var(--color-texto);
+}
+
+/* Panel de búsqueda desplegable */
+.buscador-panel {
+    position: absolute;
+    top: calc(100% + var(--espacio-3));
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(600px, 90vw);
+    background-color: var(--color-fondo-tarjeta);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-lg);
+    box-shadow: var(--sombra-elevada);
+    padding: var(--espacio-4);
+    z-index: 1040;
+}
+
+.buscador-panel__resultado {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-3);
+    padding: var(--espacio-2);
+    border-radius: var(--radio-sm);
+    text-decoration: none;
+    transition: background-color var(--transicion-rapida);
+}
+
+.buscador-panel__resultado:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.buscador-panel__resultado-imagen {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: var(--radio-sm);
+    flex-shrink: 0;
+    background-color: var(--color-fondo-elevado);
+}
+
+.buscador-panel__resultado-nombre {
+    color: var(--color-texto);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.buscador-panel__resultado-precio {
+    color: var(--color-acento-2);
+    font-size: 0.85rem;
+    margin-bottom: 0;
+}
+
+.card {
+    background-color: var(--color-fondo-tarjeta);
+    border: 1px solid var(--color-borde);
+    color: var(--color-texto);
+    box-shadow: var(--sombra-tarjeta);
+}
+
+.card-title, .card-text {
+    color: var(--color-texto);
+}
+
+.form-control, .form-select {
+    background-color: var(--color-fondo-elevado);
+    border: 1px solid var(--color-borde);
+    color: var(--color-texto);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--color-fondo-elevado);
+    border-color: var(--color-acento);
+    color: var(--color-texto);
+    box-shadow: var(--sombra-acento);
+}
+
+.form-control::placeholder {
+    color: var(--color-texto-apagado);
+}
+
+.form-label {
+    color: var(--color-texto-tenue);
+}
+
+.table {
+    color: var(--color-texto);
+    border-color: var(--color-borde);
+}
+
+.table > :not(caption) > * > * {
+    background-color: transparent;
+    color: var(--color-texto);
+    border-bottom-color: var(--color-borde);
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.modal-content {
+    background-color: var(--color-fondo-tarjeta);
+    border: 1px solid var(--color-borde);
+    color: var(--color-texto);
+}
+
+.modal-header, .modal-footer {
+    border-color: var(--color-borde);
+}
+
+.offcanvas {
+    background-color: var(--color-fondo-tarjeta);
+    color: var(--color-texto);
+}
+
+.nav-tabs {
+    border-color: var(--color-borde);
+}
+
+.nav-tabs .nav-link {
+    color: var(--color-texto-tenue);
+    border: none;
+    border-bottom: 2px solid transparent;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: transparent;
+    color: var(--color-texto);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent;
+    color: var(--color-acento);
+    border-bottom-color: var(--color-acento);
+}
+
+
+/* =============================================================
+ * 3. COMPONENTES OOCSS
+ * ============================================================= */
+
+/* --- Objeto base: botones ---
+   Estructura compartida por cualquier variante de botón del sitio.
+   Se combina con un modificador de apariencia. */
+
+.btn-base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--espacio-2);
+    padding: var(--espacio-2) var(--espacio-4);
+    font-family: var(--fuente-cuerpo);
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: var(--radio-md);
+    border: 1px solid transparent;
+    transition: background-color var(--transicion-rapida),
+                border-color var(--transicion-rapida),
+                transform var(--transicion-rapida);
+}
+
+.btn-base:active {
+    transform: scale(0.98);
+}
+
+.btn-base--primario {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    background-color: var(--color-acento);
+    color: var(--color-acento-texto-sobre);
+    transition: background-color var(--transicion-rapida),
+                filter var(--transicion-rapida),
+                transform var(--transicion-rapida);
+}
+
+.btn-base--primario:hover {
+    background-color: var(--color-acento);
+    filter: brightness(1.15);
+    color: var(--color-acento-texto-sobre);
+}
+
+.btn-base--fantasma {
+    background-color: transparent;
+    border-color: var(--color-borde);
+    color: var(--color-texto);
+}
+
+.btn-base--fantasma:hover {
+    border-color: var(--color-acento);
+    color: var(--color-acento);
+}
+
+/* Reasigna los botones de Bootstrap ya usados en el HTML existente
+   a esta misma apariencia, sin tener que reescribir las clases en
+   cada archivo .html. */
+
+.btn-primary {
+    background-color: var(--color-acento);
+    border-color: var(--color-acento);
+    transition: filter var(--transicion-rapida), transform var(--transicion-rapida);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--color-acento);
+    border-color: var(--color-acento);
+    filter: brightness(1.15);
+}
+
+.btn-outline-primary {
+    color: var(--color-acento);
+    border-color: var(--color-acento);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--color-acento);
+    border-color: var(--color-acento);
+}
+
+.btn-outline-light {
+    color: var(--color-texto);
+    border-color: var(--color-borde);
+}
+
+.btn-outline-light:hover {
+    background-color: var(--color-fondo-elevado);
+    border-color: var(--color-borde-hover);
+    color: var(--color-texto);
+}
+
+.btn-outline-secondary {
+    color: var(--color-texto-tenue);
+    border-color: var(--color-borde);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--color-fondo-elevado);
+    color: var(--color-texto);
+    border-color: var(--color-borde-hover);
+}
+
+.btn-success {
+    background-color: var(--color-exito);
+    border-color: var(--color-exito);
+}
+
+.btn-danger, .btn-outline-danger:hover {
+    background-color: var(--color-peligro);
+    border-color: var(--color-peligro);
+}
+
+.btn-outline-danger {
+    color: var(--color-peligro);
+    border-color: var(--color-peligro);
+}
+
+.btn-secondary {
+    background-color: var(--color-fondo-elevado);
+    border-color: var(--color-borde);
+    color: var(--color-texto);
+}
+
+
+/* --- Objeto base: badges/insignias --- */
+
+.badge-base {
+    display: inline-block;
+    padding: var(--espacio-1) var(--espacio-2);
+    border-radius: var(--radio-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+
+/* =============================================================
+ * 4. COMPONENTES BEM
+ * ============================================================= */
+
+/* --- Bloque: producto-card ---
+   Tarjeta de producto del catálogo (index.html). */
+
+.producto-card {
+    background-color: var(--color-fondo-tarjeta);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radio-lg);
+    overflow: hidden;
+    transition: transform var(--transicion-media),
+                box-shadow var(--transicion-media),
+                border-color var(--transicion-media);
+    height: 100%;
+}
+
+.producto-card:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-6px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.producto-card__imagen {
+    height: 180px;
+    object-fit: cover;
+    width: 100%;
+    background-color: var(--color-fondo-elevado);
+}
+
+.producto-card__cuerpo {
+    padding: var(--espacio-4);
+}
+
+.producto-card__nombre {
+    font-family: var(--fuente-titulos);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-texto);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.producto-card__categoria {
+    font-family: var(--fuente-cuerpo);
+    color: var(--color-texto-tenue);
+    font-size: 0.8rem;
+}
+
+.producto-card__precio {
+    font-family: var(--fuente-titulos);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--color-acento-2);
+}
+
+.producto-card__stock {
+    font-size: 0.8rem;
+    color: var(--color-texto-tenue);
+}
+
+.producto-card__stock--bajo {
+    color: var(--color-advertencia);
+}
+
+
+/* --- Bloque: carrito-item ---
+   Renglón del offcanvas de carrito (index.html). */
+
+.carrito-item {
+    display: flex;
+    gap: var(--espacio-3);
+    padding-bottom: var(--espacio-3);
+    margin-bottom: var(--espacio-3);
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.carrito-item__imagen {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: var(--radio-sm);
+    background-color: var(--color-fondo-elevado);
+    flex-shrink: 0;
+}
+
+.carrito-item__nombre {
+    color: var(--color-texto);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.carrito-item__precio-unitario {
+    color: var(--color-texto-tenue);
+    font-size: 0.85rem;
+}
+
+.carrito-item__controles {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-2);
+}
+
+.carrito-item__aviso {
+    color: var(--color-advertencia);
+    font-size: 0.8rem;
+}
+
+.carrito-item__aviso--critico {
+    color: var(--color-peligro);
+}
+
+
+/* --- Bloque: filtro-categoria ---
+   Botones de filtro por categoría en el catálogo público. */
+
+.filtro-categoria {
+    background-color: transparent;
+    border: 1px solid var(--color-borde);
+    color: var(--color-texto-tenue);
+    padding: var(--espacio-1) var(--espacio-3);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    transition: all var(--transicion-rapida);
+}
+
+.filtro-categoria:hover {
+    border-color: var(--color-acento);
+    color: var(--color-texto);
+}
+
+.filtro-categoria--activo {
+    background-color: var(--color-acento);
+    border-color: var(--color-acento);
+    color: var(--color-acento-texto-sobre);
+}
+
+
+/* =============================================================
+ * UTILIDADES PUNTUALES
+ * ============================================================= */
+
+.table img {
+    display: block;
+}
+
+#alertaGlobal {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Scrollbar discreto, coherente con la paleta oscura */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-fondo);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-borde);
+    border-radius: var(--radio-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-borde-hover);
+}
+
+
+/* =============================================================
+ * 5. HERO INMERSIVO Y BENTO GRID
+ *
+ * Inspirado en referencias D2C premium (fondo con resplandor,
+ * tipografía XL, cuadrícula tipo "bento box" para features).
+ * Reutiliza las variables definidas en la Sección 1 — nunca
+ * valores sueltos — y las clases BEM/OOCSS ya existentes donde
+ * aplican (.producto-card para el hover elevado, .btn-base para
+ * el CTA), en vez de duplicar conceptos.
+ * ============================================================= */
+
+.hero-section {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--color-fondo);
+    padding-top: var(--espacio-7);
+    padding-bottom: var(--espacio-7);
+}
+
+/* Resplandor radial de fondo, estilo UNIQCASE. Puramente decorativo:
+   pointer-events: none evita que intercepte clics del contenido. */
+.hero-section__resplandor {
+    position: absolute;
+    top: 30%;
+    left: 65%;
+    transform: translate(-50%, -50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(77, 127, 255, 0.18) 0%, rgba(11, 14, 20, 0) 60%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.hero-section__contenido {
+    position: relative;
+    z-index: 1;
+}
+
+.hero-section__titulo {
+    font-family: var(--fuente-titulos);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    color: var(--color-texto);
+}
+
+.hero-section__titulo-acento {
+    background: linear-gradient(135deg, var(--color-acento-hover) 0%, var(--color-acento) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-section__descripcion {
+    color: var(--color-texto-tenue);
+    font-size: 1.1rem;
+    max-width: 34rem;
+}
+
+/* Producto flotante: animación sutil + sombra difusa que refuerza
+   la sensación de objeto "levitando" sobre el fondo oscuro. */
+.hero-section__imagen {
+    animation: flotar 6s ease-in-out infinite;
+    filter: drop-shadow(0 25px 35px rgba(0, 0, 0, 0.5));
+    border-radius: var(--radio-lg);
+    max-height: 480px;
+    object-fit: cover;
+}
+
+@keyframes flotar {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-18px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-section__imagen {
+        animation: none;
+    }
+}
+
+/* --- Bento grid: cuadrícula asimétrica de features --- */
+
+.bento-card {
+    background-color: var(--color-fondo-tarjeta);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radio-lg);
+    overflow: hidden;
+    height: 100%;
+    transition: transform var(--transicion-media),
+                box-shadow var(--transicion-media),
+                border-color var(--transicion-media);
+}
+
+.bento-card:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-5px);
+    box-shadow: var(--sombra-elevada);
+}
+
+.bento-card--imagen {
+    background-size: cover;
+    background-position: center;
+    min-height: 280px;
+}
+
+.bento-card__titulo {
+    font-family: var(--fuente-titulos);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-texto);
+}
+
+.bento-card__texto {
+    color: var(--color-texto-tenue);
+}
+
+.bento-card__icono {
+    font-size: 1.75rem;
+    color: var(--color-acento);
+}
+
+.bento-card__etiqueta {
+    color: var(--color-texto-tenue);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}

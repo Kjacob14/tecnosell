@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo - Tienda Electrónica</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+    <link rel="stylesheet" href="assets/css/estilos.css">
+</head>
+<body class="bg-body-tertiary">
+
+    <!-- ============================================================
+         BARRA DE NAVEGACIÓN
+         ============================================================ -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">Tienda Electrónica · Admin</span>
+
+            <div class="d-flex align-items-center">
+                <span id="nombreUsuarioActivo" class="text-light me-3 small"></span>
+                <button id="btnLogout" class="btn btn-outline-light btn-sm">
+                    Cerrar sesión
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+
+        <div id="alertaGlobal" class="alert d-none" role="alert"></div>
+
+        <!-- ============================================================
+             PESTAÑAS
+             ============================================================ -->
+        <ul class="nav nav-tabs mb-4" id="tabsAdmin" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button
+                    class="nav-link active"
+                    id="tab-productos-btn"
+                    data-bs-toggle="tab"
+                    data-bs-target="#tab-productos"
+                    type="button"
+                    role="tab"
+                >
+                    Productos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button
+                    class="nav-link"
+                    id="tab-categorias-btn"
+                    data-bs-toggle="tab"
+                    data-bs-target="#tab-categorias"
+                    type="button"
+                    role="tab"
+                >
+                    Categorías
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button
+                    class="nav-link"
+                    id="tab-pedidos-btn"
+                    data-bs-toggle="tab"
+                    data-bs-target="#tab-pedidos"
+                    type="button"
+                    role="tab"
+                >
+                    Pedidos
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="tabsAdminContent">
+
+            <!-- ========================================================
+                 TAB: PRODUCTOS
+                 ======================================================== -->
+            <div class="tab-pane fade show active" id="tab-productos" role="tabpanel">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 m-0">Productos</h2>
+                    <button
+                        class="btn btn-success btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalProducto"
+                        id="btnNuevoProducto"
+                    >
+                        + Nuevo producto
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Imagen</th>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>Precio</th>
+                                <th>Stock</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaProductos">
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">
+                                    Cargando productos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- ========================================================
+                 TAB: CATEGORÍAS
+                 ======================================================== -->
+            <div class="tab-pane fade" id="tab-categorias" role="tabpanel">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 m-0">Categorías</h2>
+                    <button
+                        class="btn btn-success btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalCategoria"
+                        id="btnNuevaCategoria"
+                    >
+                        + Nueva categoría
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaCategorias">
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">
+                                    Cargando categorías...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- ========================================================
+                 TAB: PEDIDOS
+                 ======================================================== -->
+            <div class="tab-pane fade" id="tab-pedidos" role="tabpanel">
+
+                <h2 class="h5 mb-3">Pedidos</h2>
+
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaPedidos">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    Cargando pedidos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         MODAL: PRODUCTO (crear / editar)
+         ============================================================ -->
+    <div class="modal fade" id="modalProducto" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form id="formProducto" novalidate method="dialog">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="tituloModalProducto">Nuevo producto</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div
+                            id="alertaFormProducto"
+                            class="alert alert-danger d-none"
+                            role="alert"
+                        ></div>
+
+                        <input type="hidden" id="productoId" value="">
+
+                        <div class="mb-3">
+                            <label for="productoNombre" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="productoNombre" maxlength="150" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="productoDescripcion" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="productoDescripcion" rows="3"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label for="productoPrecio" class="form-label">Precio</label>
+                                <input type="number" step="0.01" min="0" class="form-control" id="productoPrecio" required>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="productoStock" class="form-label">Stock</label>
+                                <input type="number" step="1" min="0" class="form-control" id="productoStock" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="productoCategoria" class="form-label">Categoría</label>
+                            <select class="form-select" id="productoCategoria">
+                                <option value="">Sin categoría</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="productoEstado" class="form-label">Estado</label>
+                            <select class="form-select" id="productoEstado">
+                                <option value="1">Activo</option>
+                                <option value="0">Inactivo</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="grupoImagenProducto">
+                            <label for="productoImagen" class="form-label">Imagen (JPG, PNG o WEBP, máx. 5 MB)</label>
+                            <input type="file" class="form-control" id="productoImagen" accept="image/jpeg,image/png,image/webp">
+                            <div class="form-text" id="ayudaImagenProducto"></div>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardarProducto">
+                            <span
+                                class="spinner-border spinner-border-sm d-none"
+                                id="spinnerProducto"
+                                role="status"
+                                aria-hidden="true"
+                            ></span>
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         MODAL: CATEGORÍA (crear / editar)
+         ============================================================ -->
+    <div class="modal fade" id="modalCategoria" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form id="formCategoria" novalidate method="dialog">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="tituloModalCategoria">Nueva categoría</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div
+                            id="alertaFormCategoria"
+                            class="alert alert-danger d-none"
+                            role="alert"
+                        ></div>
+
+                        <input type="hidden" id="categoriaId" value="">
+
+                        <div class="mb-3">
+                            <label for="categoriaNombre" class="form-label">Nombre de la categoría</label>
+                            <input type="text" class="form-control" id="categoriaNombre" maxlength="50" required>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardarCategoria">
+                            <span
+                                class="spinner-border spinner-border-sm d-none"
+                                id="spinnerCategoria"
+                                role="status"
+                                aria-hidden="true"
+                            ></span>
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         MODAL: DETALLE DE PEDIDO
+         ============================================================ -->
+    <div class="modal fade" id="modalDetallePedido" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalle del pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body" id="contenidoDetallePedido">
+                    <p class="text-muted text-center">Cargando...</p>
+                </div>
+
+                <div class="modal-footer">
+                    <div class="me-auto">
+                        <label for="selectEstadoPedido" class="form-label me-2 mb-0">Cambiar estado:</label>
+                        <select class="form-select form-select-sm d-inline-block w-auto" id="selectEstadoPedido">
+                            <option value="pendiente">Pendiente</option>
+                            <option value="pagado">Pagado</option>
+                            <option value="enviado">Enviado</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" id="btnActualizarEstadoPedido">
+                        Actualizar estado
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         CONFIRMACIÓN GENÉRICA (eliminar producto / categoría)
+         ============================================================ -->
+    <div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="mensajeConfirmacion">
+                    ¿Está seguro de realizar esta acción?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarAccion">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    ></script>
+    <script src="assets/js/app_admin.js"></script>
+</body>
+</html>
