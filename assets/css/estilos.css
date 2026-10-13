@@ -659,6 +659,206 @@ a:hover {
 }
 
 
+/* --- Bloque: toast-tienda ---
+   Avisos breves de la tienda (producto agregado, errores de stock,
+   sesión requerida). Se apilan arriba a la derecha, debajo de la
+   barra flotante, y desaparecen solos. */
+
+.toast-contenedor {
+    position: fixed;
+    top: 104px;
+    right: var(--espacio-4);
+    z-index: 1090;
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-2);
+    width: min(360px, calc(100vw - 2 * var(--espacio-4)));
+    pointer-events: none;
+}
+
+.toast-tienda {
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--espacio-3);
+    padding: var(--espacio-3) var(--espacio-4);
+    background-color: var(--color-fondo-tarjeta);
+    border: 1px solid var(--color-borde);
+    border-left-width: 3px;
+    border-radius: var(--radio-md);
+    box-shadow: var(--sombra-elevada);
+    color: var(--color-texto);
+    font-size: 0.9rem;
+    animation: toast-entrada var(--transicion-media) both;
+}
+
+.toast-tienda--success { border-left-color: var(--color-exito); }
+.toast-tienda--danger  { border-left-color: var(--color-peligro); }
+.toast-tienda--warning { border-left-color: var(--color-advertencia); }
+.toast-tienda--info    { border-left-color: var(--color-acento); }
+
+.toast-tienda__icono {
+    margin-top: 2px;
+}
+
+.toast-tienda--success .toast-tienda__icono { color: var(--color-exito); }
+.toast-tienda--danger  .toast-tienda__icono { color: var(--color-peligro); }
+.toast-tienda--warning .toast-tienda__icono { color: var(--color-advertencia); }
+.toast-tienda--info    .toast-tienda__icono { color: var(--color-acento); }
+
+.toast-tienda__mensaje {
+    flex-grow: 1;
+}
+
+.toast-tienda__cerrar {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--color-texto-tenue);
+    font-size: 0.8rem;
+}
+
+.toast-tienda__cerrar:hover {
+    color: var(--color-texto);
+}
+
+.toast-tienda--saliendo {
+    opacity: 0;
+    transform: translateX(16px);
+    transition: opacity 200ms ease, transform 200ms ease;
+}
+
+@keyframes toast-entrada {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast-tienda {
+        animation: none;
+    }
+}
+
+
+/* --- Bloque: pedido-card ---
+   Tarjeta de un pedido en la vista "Mis pedidos". */
+
+.pedido-card {
+    background-color: var(--color-fondo-tarjeta);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radio-lg);
+    padding: var(--espacio-4);
+    margin-bottom: var(--espacio-4);
+}
+
+.pedido-card__cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--espacio-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--espacio-3);
+}
+
+.pedido-card__titulo {
+    font-family: var(--fuente-titulos);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-texto);
+    margin-bottom: var(--espacio-1);
+}
+
+.pedido-card__meta {
+    color: var(--color-texto-tenue);
+    font-size: 0.85rem;
+    margin-bottom: 0;
+}
+
+.pedido-card__total {
+    font-family: var(--fuente-titulos);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--color-acento-2);
+    margin: var(--espacio-1) 0 0;
+}
+
+.pedido-card__detalle {
+    margin-top: var(--espacio-4);
+    padding-top: var(--espacio-3);
+    border-top: 1px solid var(--color-borde);
+}
+
+.pedido-card__linea {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-3);
+    padding: var(--espacio-2) 0;
+}
+
+.pedido-card__linea + .pedido-card__linea {
+    border-top: 1px solid var(--color-borde);
+}
+
+.pedido-card__imagen {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: var(--radio-sm);
+    background-color: var(--color-fondo-elevado);
+    flex-shrink: 0;
+}
+
+.pedido-card__producto {
+    color: var(--color-texto);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+.pedido-card__producto-meta {
+    color: var(--color-texto-tenue);
+    font-size: 0.8rem;
+    margin-bottom: 0;
+}
+
+.pedido-card__subtotal {
+    margin-left: auto;
+    color: var(--color-texto);
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+
+/* --- Insignia de estado del pedido (reutiliza .badge-base) --- */
+
+.estado-pedido {
+    display: inline-block;
+    padding: var(--espacio-1) var(--espacio-3);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--color-borde);
+    color: var(--color-texto-tenue);
+}
+
+.estado-pedido--pendiente {
+    color: var(--color-advertencia);
+    border-color: var(--color-advertencia);
+}
+
+.estado-pedido--pagado {
+    color: var(--color-acento);
+    border-color: var(--color-acento);
+}
+
+.estado-pedido--enviado {
+    color: var(--color-exito);
+    border-color: var(--color-exito);
+}
+
+
 /* =============================================================
  * UTILIDADES PUNTUALES
  * ============================================================= */

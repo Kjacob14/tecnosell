@@ -59,6 +59,31 @@ try {
         $parametros[':id_categoria'] = $idCategoria;
     }
 
+    // Búsqueda por texto (?q=): nombre, descripción o categoría.
+    // Se puede combinar con id_categoria.
+    if (isset($_GET['q']) && is_string($_GET['q'])) {
+        $termino = mb_substr(trim($_GET['q']), 0, 100);
+
+        if ($termino !== '') {
+            // Se escapan los comodines de LIKE (% y _) con "!" para que el
+            // texto escrito por el usuario se busque de forma literal.
+            $patron = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $termino) . '%';
+
+            // Un nombre de parámetro distinto por cada LIKE: con
+            // ATTR_EMULATE_PREPARES en false, PDO no permite repetirlos.
+            $sql .= "
+                AND (
+                    p.nombre LIKE :q_nombre ESCAPE '!'
+                    OR p.descripcion LIKE :q_descripcion ESCAPE '!'
+                    OR c.nombre_categoria LIKE :q_categoria ESCAPE '!'
+                )
+            ";
+            $parametros[':q_nombre'] = $patron;
+            $parametros[':q_descripcion'] = $patron;
+            $parametros[':q_categoria'] = $patron;
+        }
+    }
+
     $sql .= " ORDER BY p.id_producto DESC";
 
     $stmt = $pdo->prepare($sql);
