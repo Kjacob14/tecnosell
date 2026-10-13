@@ -12,8 +12,8 @@ if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'admin') {
     exit;
 }
 
-require_once '../config/conexion.php';
-$conexion = Conexion::getInstancia()->getConexion();
+require_once __DIR__ . '/../config/conexion.php';
+$conexion = Conexion::obtenerConexion();
 $metodo = $_SERVER['REQUEST_METHOD'];
 
 try {

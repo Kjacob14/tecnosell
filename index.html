@@ -103,6 +103,15 @@
                     </button>
 
                     <a
+                        href="#pedidos"
+                        class="navbar-flotante__icono d-none"
+                        id="btnMisPedidos"
+                        title="Mis pedidos"
+                    >
+                        <i class="bi bi-receipt"></i>
+                    </a>
+
+                    <a
                         href="login.html"
                         class="navbar-flotante__icono d-none"
                         id="btnIniciarSesion"
@@ -284,6 +293,19 @@
         </div>
     </div>
 
+    <!-- VISTA: MIS PEDIDOS (ruta #pedidos, requiere sesión) -->
+    <div id="vista-pedidos" class="d-none">
+        <div class="container pt-4 pb-5">
+            <div class="mb-4">
+                <h1 class="hero-section__titulo h2 mb-1">Mis pedidos</h1>
+                <p class="bento-card__texto mb-0">Consulta el estado y el detalle de tus compras.</p>
+            </div>
+            <div id="listaPedidos">
+                <p class="text-muted text-center py-5">Cargando pedidos...</p>
+            </div>
+        </div>
+    </div>
+
 
     <!-- ============================================================
          OFFCANVAS: CARRITO LATERAL
@@ -361,6 +383,9 @@
         </div>
     </div>
 
+
+    <!-- Avisos breves (agregado al carrito, errores de stock, etc.) -->
+    <div id="contenedorToasts" class="toast-contenedor" aria-live="polite"></div>
 
     <script
         src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"

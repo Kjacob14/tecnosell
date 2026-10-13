@@ -50,6 +50,7 @@ const ENDPOINTS = {
     catalogo: `${API_BASE}/cliente/catalogo_controller.php`,
     carrito: `${API_BASE}/cliente/carrito_controller.php`,
     checkout: `${API_BASE}/cliente/checkout_controller.php`,
+    pedidos: `${API_BASE}/cliente/pedidos_controller.php`,
     logout: `${API_BASE}/auth/logout_controller.php`
 };
 
@@ -112,11 +113,12 @@ async function peticionApi(url, opciones = {}, silentFail = false) {
         respuesta.status === 401 &&
         (
             url.includes('/tienda_electronica/api/cliente/carrito_controller.php') ||
-            url.includes('/tienda_electronica/api/cliente/checkout_controller.php')
+            url.includes('/tienda_electronica/api/cliente/checkout_controller.php') ||
+            url.includes('/tienda_electronica/api/cliente/pedidos_controller.php')
         ) &&
         !silentFail
     ) {
-        window.location.href = 'login.html';
+        redirigirALogin();
         return new Promise(() => {});
     }
 
@@ -138,6 +140,26 @@ async function peticionApi(url, opciones = {}, silentFail = false) {
     };
 }
 
+let redirigiendoALogin = false;
+
+/**
+ * Avisa que se necesita sesión y, tras un instante para que se lea el
+ * aviso, lleva a login.html. La bandera evita avisos repetidos si
+ * varias peticiones reciben 401 a la vez.
+ */
+function redirigirALogin() {
+    if (redirigiendoALogin) {
+        return;
+    }
+
+    redirigiendoALogin = true;
+    mostrarAlertaGlobal('Inicia sesión para continuar.', 'warning');
+
+    window.setTimeout(() => {
+        window.location.href = 'login.html';
+    }, 1200);
+}
+
 
 /* =============================================================
  * UTILIDADES DE INTERFAZ
@@ -153,18 +175,65 @@ function mostrarAlerta(contenedor, mensaje, tipo = 'danger') {
     contenedor.classList.remove('d-none');
 }
 
+const ICONOS_TOAST = {
+    success: 'bi-check-circle-fill',
+    danger: 'bi-exclamation-octagon-fill',
+    warning: 'bi-exclamation-triangle-fill',
+    info: 'bi-info-circle-fill'
+};
+const MAX_TOASTS_VISIBLES = 4;
+const DURACION_TOAST_MS = 4000;
+
+/**
+ * Muestra un aviso breve (toast) arriba a la derecha. Se cierra solo
+ * a los 4 segundos o con su botón de cerrar.
+ *
+ * @param {string} mensaje
+ * @param {'success'|'danger'|'warning'|'info'} tipo
+ */
 function mostrarAlertaGlobal(mensaje, tipo = 'danger') {
-    const contenedor = document.getElementById('alertaGlobal');
+    const contenedor = document.getElementById('contenedorToasts');
 
     if (!contenedor) {
         return;
     }
 
-    mostrarAlerta(contenedor, mensaje, tipo);
+    const tipoValido = ICONOS_TOAST[tipo] ? tipo : 'info';
 
-    window.setTimeout(() => {
-        contenedor.classList.add('d-none');
-    }, 4000);
+    const toast = document.createElement('div');
+    toast.className = `toast-tienda toast-tienda--${tipoValido}`;
+    toast.setAttribute('role', tipoValido === 'danger' ? 'alert' : 'status');
+    toast.innerHTML = `
+        <i class="bi ${ICONOS_TOAST[tipoValido]} toast-tienda__icono"></i>
+        <span class="toast-tienda__mensaje"></span>
+        <button type="button" class="toast-tienda__cerrar" aria-label="Cerrar aviso">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    `;
+
+    // textContent (no innerHTML): un mensaje que venga del servidor
+    // nunca puede inyectar HTML en la página.
+    toast.querySelector('.toast-tienda__mensaje').textContent = mensaje;
+
+    const cerrar = () => {
+        if (toast.classList.contains('toast-tienda--saliendo')) {
+            return;
+        }
+
+        toast.classList.add('toast-tienda--saliendo');
+        window.setTimeout(() => toast.remove(), 200);
+    };
+
+    toast.querySelector('.toast-tienda__cerrar').addEventListener('click', cerrar);
+
+    contenedor.appendChild(toast);
+
+    // Máximo de avisos a la vez: se descarta el más antiguo.
+    while (contenedor.children.length > MAX_TOASTS_VISIBLES) {
+        contenedor.firstElementChild.remove();
+    }
+
+    window.setTimeout(cerrar, DURACION_TOAST_MS);
 }
 
 function escaparHtml(texto) {
@@ -520,7 +589,8 @@ let intervaloReintentoProducto = null;
  * la solicitada. Los IDs deben coincidir con los contenedores
  * "vista-*" del HTML.
  *
- * @param {string} idVista - 'vista-inicio', 'vista-catalogo' o 'vista-producto'
+ * @param {string} idVista - 'vista-inicio', 'vista-catalogo', 'vista-producto'
+ *   o 'vista-pedidos'
  */
 function mostrarVista(idVista) {
     // Cualquier cambio de vista cancela un reintento pendiente de
@@ -530,7 +600,7 @@ function mostrarVista(idVista) {
         intervaloReintentoProducto = null;
     }
 
-    ['vista-inicio', 'vista-catalogo', 'vista-producto'].forEach((id) => {
+    ['vista-inicio', 'vista-catalogo', 'vista-producto', 'vista-pedidos'].forEach((id) => {
         document.getElementById(id).classList.toggle('d-none', id !== idVista);
     });
 
@@ -549,6 +619,7 @@ function mostrarVista(idVista) {
  */
 function marcarEnlaceActivo(idVista) {
     const enInicio = idVista === 'vista-inicio';
+    const enProductos = idVista === 'vista-catalogo' || idVista === 'vista-producto';
     const enlaceHome = document.getElementById('enlaceHome');
     const enlaceProductos = document.getElementById('enlaceProductos');
 
@@ -557,7 +628,7 @@ function marcarEnlaceActivo(idVista) {
     }
 
     if (enlaceProductos) {
-        enlaceProductos.classList.toggle('active', !enInicio);
+        enlaceProductos.classList.toggle('active', enProductos);
     }
 }
 
@@ -567,6 +638,11 @@ function mostrarVistaInicio() {
 
 function mostrarVistaCatalogo() {
     mostrarVista('vista-catalogo');
+}
+
+function mostrarVistaPedidos() {
+    mostrarVista('vista-pedidos');
+    cargarPedidos();
 }
 
 /**
@@ -663,7 +739,8 @@ function inicializarRouter() {
     const router = crearRouter({
         'inicio': mostrarVistaInicio,
         'catalogo': mostrarVistaCatalogo,
-        'producto': mostrarVistaProducto
+        'producto': mostrarVistaProducto,
+        'pedidos': mostrarVistaPedidos
     }, 'inicio');
 
     router.iniciar();
@@ -751,6 +828,7 @@ async function cargarCarrito(silentFail = false) {
 function actualizarBarraSesion(haySesion) {
     document.getElementById('btnIniciarSesion').classList.toggle('d-none', haySesion);
     document.getElementById('btnCerrarSesion').classList.toggle('d-none', !haySesion);
+    document.getElementById('btnMisPedidos').classList.toggle('d-none', !haySesion);
 }
 
 function inicializarLogout() {
@@ -880,7 +958,14 @@ async function agregarAlCarrito(idProducto) {
         return;
     }
 
-    mostrarAlertaGlobal('Producto agregado al carrito.', 'success');
+    const producto = catalogoCompleto.find((p) => p.id_producto === Number(idProducto));
+
+    mostrarAlertaGlobal(
+        producto
+            ? `"${producto.nombre}" agregado al carrito.`
+            : 'Producto agregado al carrito.',
+        'success'
+    );
     await cargarCarrito();
 }
 
@@ -930,6 +1015,7 @@ async function eliminarDelCarrito(idProducto) {
         return;
     }
 
+    mostrarAlertaGlobal('Producto eliminado del carrito.', 'info');
     await cargarCarrito();
 }
 
@@ -994,6 +1080,185 @@ function inicializarControlesCarrito() {
 
 
 /* =============================================================
+ * MIS PEDIDOS
+ *
+ * Vista #pedidos: historial del cliente con sesión iniciada.
+ * pedidos_controller.php devuelve solo los pedidos del usuario de la
+ * sesión; sin sesión responde 401 y peticionApi avisa y redirige a
+ * login.html.
+ * ============================================================= */
+
+const ETIQUETAS_ESTADO_PEDIDO = {
+    pendiente: 'Pendiente',
+    pagado: 'Pagado',
+    enviado: 'Enviado'
+};
+
+function etiquetaEstadoPedido(estado) {
+    return ETIQUETAS_ESTADO_PEDIDO[estado] || estado || 'Sin estado';
+}
+
+/**
+ * Convierte la fecha de MySQL ("2026-10-12 13:35:00") en un texto
+ * legible en español de México.
+ *
+ * @param {string} valor
+ * @returns {string}
+ */
+function formatearFecha(valor) {
+    const fecha = new Date(String(valor).replace(' ', 'T'));
+
+    if (Number.isNaN(fecha.getTime())) {
+        return valor ?? '';
+    }
+
+    return fecha.toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+}
+
+async function cargarPedidos() {
+    const contenedor = document.getElementById('listaPedidos');
+
+    contenedor.innerHTML = '<p class="text-muted text-center py-5">Cargando pedidos...</p>';
+
+    const { ok, data } = await peticionApi(ENDPOINTS.pedidos, { method: 'GET' });
+
+    if (!ok) {
+        contenedor.innerHTML = `
+            <p class="text-danger text-center py-5">
+                ${escaparHtml(data.message || 'No fue posible cargar tus pedidos.')}
+            </p>
+        `;
+        return;
+    }
+
+    renderizarPedidos(data.pedidos || []);
+}
+
+function renderizarPedidos(pedidos) {
+    const contenedor = document.getElementById('listaPedidos');
+
+    if (pedidos.length === 0) {
+        contenedor.innerHTML = `
+            <div class="bento-card p-5 text-center">
+                <i class="bi bi-receipt bento-card__icono d-block mb-3"></i>
+                <h4 class="bento-card__titulo h5 mb-2">Aún no tienes pedidos</h4>
+                <p class="bento-card__texto small mb-4">
+                    Cuando compres, aquí verás el estado de cada pedido.
+                </p>
+                <a href="#catalogo" class="btn-base btn-base--primario">
+                    Explorar catálogo
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        `;
+        return;
+    }
+
+    contenedor.innerHTML = pedidos.map((pedido) => `
+        <div class="pedido-card">
+            <div class="pedido-card__cabecera">
+                <div>
+                    <p class="pedido-card__titulo">Pedido #${pedido.id_pedido}</p>
+                    <p class="pedido-card__meta">
+                        ${escaparHtml(formatearFecha(pedido.fecha_pedido))}
+                        · ${pedido.total_articulos} ${pedido.total_articulos === 1 ? 'artículo' : 'artículos'}
+                    </p>
+                </div>
+                <div class="text-end">
+                    <span class="estado-pedido estado-pedido--${escaparHtml(pedido.estado_pedido)}">
+                        ${escaparHtml(etiquetaEstadoPedido(pedido.estado_pedido))}
+                    </span>
+                    <p class="pedido-card__total">${formatearMoneda(pedido.total)}</p>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                class="btn-base btn-base--fantasma btn-sm btn-ver-pedido"
+                data-id-pedido="${pedido.id_pedido}"
+            >
+                Ver productos
+            </button>
+            <div class="pedido-card__detalle d-none"></div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Renglones de productos de un pedido. Los precios son los congelados
+ * al momento de la compra (precio_compra), no los actuales del catálogo.
+ *
+ * @param {Array} detalles
+ * @returns {string}
+ */
+function renderizarLineasPedido(detalles) {
+    if (detalles.length === 0) {
+        return '<p class="text-muted small mb-0">Este pedido no tiene productos registrados.</p>';
+    }
+
+    return detalles.map((linea) => `
+        <div class="pedido-card__linea">
+            ${linea.imagen
+                ? `<img src="uploads/${escaparHtml(linea.imagen)}" class="pedido-card__imagen" alt="">`
+                : '<div class="pedido-card__imagen"></div>'
+            }
+            <div>
+                <p class="pedido-card__producto">${escaparHtml(linea.nombre)}</p>
+                <p class="pedido-card__producto-meta">
+                    ${linea.cantidad} × ${formatearMoneda(linea.precio_compra)}
+                </p>
+            </div>
+            <span class="pedido-card__subtotal">${formatearMoneda(linea.subtotal)}</span>
+        </div>
+    `).join('');
+}
+
+function inicializarPedidos() {
+    const contenedor = document.getElementById('listaPedidos');
+
+    if (!contenedor) {
+        return;
+    }
+
+    contenedor.addEventListener('click', async (evento) => {
+        const boton = evento.target.closest('.btn-ver-pedido');
+
+        if (!boton) {
+            return;
+        }
+
+        const detalle = boton.closest('.pedido-card').querySelector('.pedido-card__detalle');
+
+        // Si el detalle ya se cargó, solo se muestra u oculta.
+        if (detalle.dataset.cargado === 'true') {
+            const oculto = detalle.classList.toggle('d-none');
+            boton.textContent = oculto ? 'Ver productos' : 'Ocultar productos';
+            return;
+        }
+
+        boton.disabled = true;
+
+        const { ok, data } = await peticionApi(
+            `${ENDPOINTS.pedidos}?id=${encodeURIComponent(boton.dataset.idPedido)}`,
+            { method: 'GET' }
+        );
+
+        boton.disabled = false;
+
+        if (!ok) {
+            mostrarAlertaGlobal(data.message || 'No fue posible cargar el detalle del pedido.');
+            return;
+        }
+
+        detalle.innerHTML = renderizarLineasPedido(data.pedido.detalles || []);
+        detalle.dataset.cargado = 'true';
+        detalle.classList.remove('d-none');
+        boton.textContent = 'Ocultar productos';
+    });
+}
+
+
+/* =============================================================
  * CHECKOUT
  * ============================================================= */
 
@@ -1049,10 +1314,20 @@ function mostrarResultadoCheckoutExito(pedido) {
     `;
 
     document.getElementById('pieModalCheckout').innerHTML = `
-        <button type="button" class="btn btn-success w-100" data-bs-dismiss="modal" id="btnCheckoutCerrarExito">
+        <button type="button" class="btn btn-outline-secondary flex-fill" data-bs-dismiss="modal" id="btnCheckoutVerPedidos">
+            Ver mis pedidos
+        </button>
+        <button type="button" class="btn btn-success flex-fill" data-bs-dismiss="modal" id="btnCheckoutCerrarExito">
             Continuar
         </button>
     `;
+
+    // data-bs-dismiss cierra el modal; además se lleva al cliente a la
+    // vista de pedidos (se usa un botón, no un enlace, porque Bootstrap
+    // cancela la navegación de los enlaces con data-bs-dismiss).
+    document.getElementById('btnCheckoutVerPedidos').addEventListener('click', () => {
+        window.location.hash = 'pedidos';
+    }, { once: true });
 
     // El carrito ya quedó vacío en el servidor tras el pago exitoso.
     cargarCarrito();
@@ -1262,6 +1537,7 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarAgregarAlCarrito();
     inicializarControlesCarrito();
     inicializarCheckout();
+    inicializarPedidos();
     inicializarLogout();
 
     cargarCatalogoInicial();
