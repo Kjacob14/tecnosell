@@ -202,6 +202,11 @@ a:hover {
     box-shadow: var(--sombra-elevada);
 }
 
+.navbar-flotante .dropdown-divider {
+    border-color: var(--color-borde);
+    opacity: 1;
+}
+
 .navbar-flotante .dropdown-item {
     color: var(--color-texto-tenue);
     border-radius: var(--radio-sm);

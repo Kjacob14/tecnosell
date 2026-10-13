@@ -33,10 +33,11 @@
 
                 <!-- Zona izquierda: enlaces de navegación -->
                 <div class="d-none d-lg-flex align-items-center gap-1">
-                    <a href="index.html" class="navbar-flotante__enlace active">Home</a>
+                    <a href="#inicio" id="enlaceHome" class="navbar-flotante__enlace active">Home</a>
 
                     <div class="dropdown">
                         <button
+                            id="enlaceProductos"
                             class="navbar-flotante__enlace dropdown-toggle bg-transparent border-0"
                             type="button"
                             data-bs-toggle="dropdown"
@@ -65,7 +66,7 @@
                 <!-- Zona centro: marca (centrado absoluto, independiente
                      del ancho de los bloques izquierdo/derecho) -->
                 <a
-                    href="index.html"
+                    href="#inicio"
                     class="navbar-brand mb-0 position-absolute top-50 start-50 translate-middle"
                 >
                     TecnoSell
@@ -153,7 +154,7 @@
                 <!-- Menú colapsable (pantallas pequeñas) -->
                 <div class="collapse navbar-collapse mt-3 d-lg-none w-100" id="navbarMovil">
                     <div class="d-flex flex-column gap-1">
-                        <a href="index.html" class="navbar-flotante__enlace">Home</a>
+                        <a href="#inicio" class="navbar-flotante__enlace">Home</a>
                         <a href="#catalogo" class="navbar-flotante__enlace">Productos</a>
                         <a href="#" class="navbar-flotante__enlace">Soporte</a>
                     </div>
@@ -163,7 +164,8 @@
         </nav>
     </div>
 
-    <div id="vista-catalogo">
+    <!-- VISTA: INICIO (ruta #inicio, la de por defecto) -->
+    <div id="vista-inicio">
         <header class="hero-section">
         <div class="hero-section__resplandor"></div>
         <div class="container hero-section__contenido">
@@ -250,9 +252,15 @@
 
         </div>
     </section>
+    </div><!-- /#vista-inicio -->
 
-        <!-- CATÁLOGO DE PRODUCTOS (sigue dentro de #vista-catalogo, que se abre antes del hero) -->
-        <div class="container" id="catalogo">
+    <!-- VISTA: CATÁLOGO (pantalla propia, ruta #catalogo) -->
+    <div id="vista-catalogo" class="d-none">
+        <div class="container pt-4 pb-5" id="catalogo">
+            <div class="mb-4">
+                <h1 class="hero-section__titulo h2 mb-1">Catálogo</h1>
+                <p class="bento-card__texto mb-0">Productos con stock verificado en tiempo real.</p>
+            </div>
             <div class="mb-4">
                 <div id="filtrosCategorias" class="d-flex flex-wrap gap-2">
                     <button class="btn btn-sm btn-primary btn-filtro-categoria" data-id-categoria="">Todas</button>
