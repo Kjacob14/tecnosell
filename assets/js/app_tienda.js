@@ -330,12 +330,25 @@ function renderizarDropdownCategorias(productos) {
 
     const categoriasUnicas = obtenerCategoriasUnicas(productos);
 
+    // Primer ítem fijo: lleva al catálogo completo, sin filtrar.
+    const itemTodo = `
+        <li>
+            <button
+                type="button"
+                class="dropdown-item btn-dropdown-categoria"
+                data-id-categoria=""
+            >
+                Todo el catálogo
+            </button>
+        </li>
+    `;
+
     if (categoriasUnicas.size === 0) {
-        menu.innerHTML = '<li><span class="dropdown-item-text text-muted small">Sin categorías disponibles</span></li>';
+        menu.innerHTML = itemTodo;
         return;
     }
 
-    menu.innerHTML = Array.from(categoriasUnicas.entries())
+    menu.innerHTML = itemTodo + '<li><hr class="dropdown-divider"></li>' + Array.from(categoriasUnicas.entries())
         .map(([id, nombre]) => `
             <li>
                 <button
@@ -379,15 +392,14 @@ function inicializarDropdownCategorias() {
         categoriaActiva = idCategoria;
         cargarCatalogoPorCategoria(idCategoria);
 
-        // Si se elige una categoría estando en el detalle de un producto,
-        // primero se vuelve a la vista del catálogo (el cambio de hash
-        // dispara el router, que también baja a la sección).
-        if (window.location.hash.startsWith('#producto')) {
+        // Desde Inicio o desde el detalle de un producto se cambia a la
+        // vista del catálogo (el cambio de hash dispara el router). Si
+        // ya se está en el catálogo, solo se sube al inicio de la lista.
+        if (window.location.hash !== '#catalogo') {
             window.location.hash = 'catalogo';
-            return;
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-
-        document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' });
     });
 }
 
@@ -489,31 +501,28 @@ function inicializarFiltrosCategorias() {
 }
 
 /* =============================================================
- * ROUTER: VISTAS "CATÁLOGO" Y "PRODUCTO"
+ * ROUTER: VISTAS "INICIO", "CATÁLOGO" Y "PRODUCTO"
  *
- * Reemplaza el antiguo modal de detalle de producto. router.js
- * (cargado antes de este archivo) despacha por hash; aquí solo
- * se definen los handlers de cada ruta y las funciones que
+ * Cada ruta es una pantalla propia del SPA (#inicio, #catalogo,
+ * #producto/<id>). crearRouter() despacha por hash; aquí solo se
+ * definen los handlers de cada ruta y las funciones que
  * muestran/ocultan las vistas correspondientes en el DOM.
  * ============================================================= */
 
-/**
- * Oculta todas las vistas de nivel superior y muestra únicamente
- * la solicitada. Los IDs deben coincidir con los contenedores
- * "vista-*" del HTML.
- *
- * @param {string} idVista - 'vista-catalogo' o 'vista-producto'
- * @param {boolean} desplazarArriba - si es false, no se sube al inicio
- *   de la página (lo usa el catálogo cuando se llega con #catalogo y
- *   el scroll lo decide la propia ruta).
- */
 // Referencia al intervalo de reintento de mostrarVistaProducto, para
 // poder cancelarlo si el usuario navega a otra vista antes de que
 // el catálogo termine de cargar (evita un intervalo huérfano
 // ejecutándose en segundo plano indefinidamente).
 let intervaloReintentoProducto = null;
 
-function mostrarVista(idVista, desplazarArriba = true) {
+/**
+ * Oculta todas las vistas de nivel superior y muestra únicamente
+ * la solicitada. Los IDs deben coincidir con los contenedores
+ * "vista-*" del HTML.
+ *
+ * @param {string} idVista - 'vista-inicio', 'vista-catalogo' o 'vista-producto'
+ */
+function mostrarVista(idVista) {
     // Cualquier cambio de vista cancela un reintento pendiente de
     // mostrarVistaProducto, sin importar hacia dónde se navegue.
     if (intervaloReintentoProducto !== null) {
@@ -521,30 +530,43 @@ function mostrarVista(idVista, desplazarArriba = true) {
         intervaloReintentoProducto = null;
     }
 
-    ['vista-catalogo', 'vista-producto'].forEach((id) => {
+    ['vista-inicio', 'vista-catalogo', 'vista-producto'].forEach((id) => {
         document.getElementById(id).classList.toggle('d-none', id !== idVista);
     });
 
+    marcarEnlaceActivo(idVista);
+
     // Al cambiar de vista, se regresa el scroll al inicio — igual
     // que se esperaría al "abrir otra página".
-    if (desplazarArriba) {
-        window.scrollTo({ top: 0, behavior: 'instant' });
-    }
+    window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 /**
- * Ruta "catalogo". Con el hash exacto #catalogo (botón "Explorar
- * catálogo", enlace móvil o "Volver al catálogo") se baja a la
- * sección de productos; sin hash se muestra la página desde arriba.
+ * Resalta en la barra flotante "Home" o "Productos" según la vista
+ * mostrada (el catálogo y el detalle cuentan como "Productos").
+ *
+ * @param {string} idVista
  */
-function mostrarVistaCatalogo() {
-    const irASeccionCatalogo = window.location.hash === '#catalogo';
+function marcarEnlaceActivo(idVista) {
+    const enInicio = idVista === 'vista-inicio';
+    const enlaceHome = document.getElementById('enlaceHome');
+    const enlaceProductos = document.getElementById('enlaceProductos');
 
-    mostrarVista('vista-catalogo', !irASeccionCatalogo);
-
-    if (irASeccionCatalogo) {
-        document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' });
+    if (enlaceHome) {
+        enlaceHome.classList.toggle('active', enInicio);
     }
+
+    if (enlaceProductos) {
+        enlaceProductos.classList.toggle('active', !enInicio);
+    }
+}
+
+function mostrarVistaInicio() {
+    mostrarVista('vista-inicio');
+}
+
+function mostrarVistaCatalogo() {
+    mostrarVista('vista-catalogo');
 }
 
 /**
@@ -639,9 +661,10 @@ function mostrarVistaProducto(resto) {
 
 function inicializarRouter() {
     const router = crearRouter({
+        'inicio': mostrarVistaInicio,
         'catalogo': mostrarVistaCatalogo,
         'producto': mostrarVistaProducto
-    }, 'catalogo');
+    }, 'inicio');
 
     router.iniciar();
 
