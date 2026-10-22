@@ -435,7 +435,7 @@ function renderizarTablaProductos(productos) {
             <td>${formatearMoneda(producto.precio)}</td>
             <td>${producto.stock}</td>
             <td>
-                <span class="badge ${producto.estado ? 'bg-success' : 'bg-secondary'}">
+                <span class="estado-pedido ${producto.estado ? 'estado-pedido--activo' : ''}">
                     ${producto.estado ? 'Activo' : 'Inactivo'}
                 </span>
             </td>
@@ -655,19 +655,13 @@ function renderizarTablaPedidos(pedidos) {
         return;
     }
 
-    const insigniasEstado = {
-        pendiente: 'bg-warning text-dark',
-        pagado: 'bg-success',
-        enviado: 'bg-primary'
-    };
-
     tabla.innerHTML = pedidos.map((pedido) => `
         <tr>
             <td>${pedido.id_pedido}</td>
             <td>${escaparHtml(pedido.nombre)}</td>
             <td>${formatearMoneda(pedido.total)}</td>
             <td>
-                <span class="badge ${insigniasEstado[pedido.estado_pedido] || 'bg-secondary'}">
+                <span class="estado-pedido estado-pedido--${escaparHtml(pedido.estado_pedido)}">
                     ${escaparHtml(pedido.estado_pedido)}
                 </span>
             </td>

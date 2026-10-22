@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,6 +21,7 @@
         rel="stylesheet"
     >
     <link rel="stylesheet" href="assets/css/estilos.css">
+    <script src="assets/js/tema.js"></script>
 </head>
 <body class="bg-body-tertiary">
 
@@ -91,6 +92,26 @@
                         disabled
                     >
                         <i class="bi bi-currency-exchange"></i>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="navbar-flotante__icono"
+                        data-accion="alternar-tema"
+                        title="Cambiar tema"
+                        aria-label="Cambiar tema"
+                    >
+                        <i class="bi bi-sun"></i>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="navbar-flotante__icono d-none d-sm-inline-flex"
+                        data-accion="tamano-texto"
+                        title="Tamaño de texto"
+                        aria-label="Tamaño de texto"
+                    >
+                        <i class="bi bi-type"></i>
                     </button>
 
                     <button
