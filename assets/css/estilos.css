@@ -634,6 +634,30 @@ a:hover {
 }
 
 
+/* --- Bloque: requisitos-password ---
+   Lista de requisitos que se marcan en vivo al escribir la contraseña
+   (registro.html). */
+
+.requisitos-password {
+    list-style: none;
+    margin: var(--espacio-2) 0 0;
+    padding: 0;
+    font-size: 0.8rem;
+}
+
+.requisitos-password li {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-2);
+    color: var(--color-texto-tenue);
+    transition: color var(--transicion-rapida);
+}
+
+.requisitos-password li.requisito--cumplido {
+    color: var(--color-exito);
+}
+
+
 /* --- Bloque: filtro-categoria ---
    Botones de filtro por categoría en el catálogo público. */
 
