@@ -26,11 +26,15 @@ const ENDPOINTS = {
     logout: `${API_BASE}/auth/logout_controller.php`,
     categorias: `${API_BASE}/admin/categorias_controller.php`,
     productos: `${API_BASE}/admin/productos_controller.php`,
+    proveedores: `${API_BASE}/admin/proveedores_controller.php`,
     pedidos: `${API_BASE}/admin/pedidos_admin_controller.php`
 };
 
 // Estado en memoria de categorías, usado para llenar el <select> de productos.
 let categoriasCache = [];
+
+// Proveedores en memoria: llenan el <select> de productos y el buscador.
+let proveedoresCache = [];
 
 
 /* =============================================================
@@ -383,6 +387,244 @@ function inicializarFormularioCategoria() {
 
 
 /* =============================================================
+ * PROVEEDORES (tab-proveedores)
+ * ============================================================= */
+
+async function cargarProveedores() {
+    const tabla = document.getElementById('tablaProveedores');
+
+    const { ok, data } = await peticionApi(ENDPOINTS.proveedores, {
+        method: 'GET'
+    });
+
+    if (!ok) {
+        tabla.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-danger">
+                    ${escaparHtml(data.message || 'No fue posible cargar los proveedores.')}
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    proveedoresCache = data.proveedores || [];
+    aplicarFiltroProveedores();
+    llenarSelectProveedores(proveedoresCache);
+}
+
+/** Filtra en memoria por empresa, contacto o correo (sin ir al servidor). */
+function aplicarFiltroProveedores() {
+    const buscador = document.getElementById('buscadorProveedores');
+    const texto = buscador ? buscador.value.trim().toLowerCase() : '';
+
+    const filtrados = texto === ''
+        ? proveedoresCache
+        : proveedoresCache.filter((proveedor) =>
+            [proveedor.nombre_empresa, proveedor.contacto, proveedor.email]
+                .some((campo) => (campo || '').toLowerCase().includes(texto))
+        );
+
+    renderizarTablaProveedores(filtrados, texto !== '');
+}
+
+function renderizarTablaProveedores(proveedores, hayBusqueda) {
+    const tabla = document.getElementById('tablaProveedores');
+
+    if (proveedores.length === 0) {
+        tabla.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    ${hayBusqueda ? 'Ningún proveedor coincide con la búsqueda.' : 'No hay proveedores registrados.'}
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tabla.innerHTML = proveedores.map((proveedor) => `
+        <tr>
+            <td>${proveedor.id_proveedor}</td>
+            <td>${escaparHtml(proveedor.nombre_empresa)}</td>
+            <td>${escaparHtml(proveedor.contacto || '—')}</td>
+            <td>${escaparHtml(proveedor.telefono || '—')}</td>
+            <td>${escaparHtml(proveedor.email || '—')}</td>
+            <td>
+                <span class="estado-pedido ${proveedor.estado ? 'estado-pedido--activo' : ''}">
+                    ${proveedor.estado ? 'Activo' : 'Inactivo'}
+                </span>
+            </td>
+            <td class="text-end">
+                <button
+                    class="btn btn-sm btn-outline-primary btn-editar-proveedor"
+                    data-id="${proveedor.id_proveedor}"
+                >
+                    Editar
+                </button>
+                <button
+                    class="btn btn-sm btn-outline-danger btn-eliminar-proveedor"
+                    data-id="${proveedor.id_proveedor}"
+                >
+                    Eliminar
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function llenarSelectProveedores(proveedores) {
+    const select = document.getElementById('productoProveedor');
+
+    if (!select) {
+        return;
+    }
+
+    const valorActual = select.value;
+
+    // Se listan todos: si un producto tiene un proveedor inactivo,
+    // debe seguir apareciendo para no perderlo al guardar.
+    select.innerHTML = '<option value="">Sin proveedor</option>' +
+        proveedores.map((proveedor) => `
+            <option value="${proveedor.id_proveedor}">
+                ${escaparHtml(proveedor.nombre_empresa)}${proveedor.estado ? '' : ' (inactivo)'}
+            </option>
+        `).join('');
+
+    select.value = valorActual;
+}
+
+function inicializarFormularioProveedor() {
+    const formProveedor = document.getElementById('formProveedor');
+
+    if (!formProveedor) {
+        return;
+    }
+
+    const modalProveedor = new bootstrap.Modal(document.getElementById('modalProveedor'));
+    const alertaForm = document.getElementById('alertaFormProveedor');
+    const btnGuardar = document.getElementById('btnGuardarProveedor');
+    const spinner = document.getElementById('spinnerProveedor');
+
+    document.getElementById('buscadorProveedores').addEventListener('input', aplicarFiltroProveedores);
+
+    document.getElementById('btnNuevoProveedor').addEventListener('click', () => {
+        formProveedor.reset();
+        document.getElementById('proveedorId').value = '';
+        document.getElementById('tituloModalProveedor').textContent = 'Nuevo proveedor';
+        ocultarAlerta(alertaForm);
+    });
+
+    document.getElementById('tablaProveedores').addEventListener('click', (evento) => {
+        const botonEditar = evento.target.closest('.btn-editar-proveedor');
+
+        if (botonEditar) {
+            const proveedor = proveedoresCache.find(
+                (item) => String(item.id_proveedor) === botonEditar.dataset.id
+            );
+
+            if (!proveedor) {
+                return;
+            }
+
+            document.getElementById('proveedorId').value = proveedor.id_proveedor;
+            document.getElementById('proveedorEmpresa').value = proveedor.nombre_empresa;
+            document.getElementById('proveedorContacto').value = proveedor.contacto || '';
+            document.getElementById('proveedorTelefono').value = proveedor.telefono || '';
+            document.getElementById('proveedorEmail').value = proveedor.email || '';
+            document.getElementById('proveedorDireccion').value = proveedor.direccion || '';
+            document.getElementById('proveedorEstado').value = String(proveedor.estado);
+            document.getElementById('tituloModalProveedor').textContent = 'Editar proveedor';
+            ocultarAlerta(alertaForm);
+
+            modalProveedor.show();
+            return;
+        }
+
+        const botonEliminar = evento.target.closest('.btn-eliminar-proveedor');
+
+        if (botonEliminar) {
+            solicitarConfirmacion(
+                '¿Eliminar este proveedor? Los productos asociados quedarán sin proveedor.',
+                async () => {
+                    const { ok, data } = await peticionApi(
+                        `${ENDPOINTS.proveedores}?id=${encodeURIComponent(botonEliminar.dataset.id)}`,
+                        { method: 'DELETE' }
+                    );
+
+                    if (!ok) {
+                        mostrarAlertaGlobal(data.message || 'No fue posible eliminar el proveedor.', 'danger');
+                        return;
+                    }
+
+                    mostrarAlertaGlobal('Proveedor eliminado correctamente.', 'success');
+                    await cargarProveedores();
+                    await cargarProductos();
+                }
+            );
+        }
+    });
+
+    formProveedor.addEventListener('submit', async (evento) => {
+        evento.preventDefault();
+        ocultarAlerta(alertaForm);
+
+        const idProveedor = document.getElementById('proveedorId').value;
+        const esEdicion = idProveedor !== '';
+
+        const cuerpo = {
+            nombre_empresa: document.getElementById('proveedorEmpresa').value.trim(),
+            contacto: document.getElementById('proveedorContacto').value.trim(),
+            telefono: document.getElementById('proveedorTelefono').value.trim(),
+            email: document.getElementById('proveedorEmail').value.trim(),
+            direccion: document.getElementById('proveedorDireccion').value.trim(),
+            estado: Number(document.getElementById('proveedorEstado').value)
+        };
+
+        // Mismas reglas que el servidor; el servidor sigue siendo quien decide.
+        if (cuerpo.nombre_empresa === '') {
+            mostrarAlerta(alertaForm, 'El nombre de la empresa es obligatorio.');
+            return;
+        }
+
+        if (cuerpo.email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cuerpo.email)) {
+            mostrarAlerta(alertaForm, 'El correo no tiene un formato válido.');
+            return;
+        }
+
+        if (cuerpo.telefono !== '' && !/^[0-9+()\-\s]{7,20}$/.test(cuerpo.telefono)) {
+            mostrarAlerta(alertaForm, 'El teléfono solo puede tener números, espacios, guiones, paréntesis y +, con al menos 7 caracteres.');
+            return;
+        }
+
+        const url = esEdicion
+            ? `${ENDPOINTS.proveedores}?id=${encodeURIComponent(idProveedor)}`
+            : ENDPOINTS.proveedores;
+
+        alternarCargaBoton(btnGuardar, spinner, true);
+
+        const { ok, data } = await peticionApi(url, {
+            method: esEdicion ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json; charset=utf-8'
+            },
+            body: JSON.stringify(cuerpo)
+        });
+
+        alternarCargaBoton(btnGuardar, spinner, false);
+
+        if (!ok) {
+            mostrarAlerta(alertaForm, data.message || 'No fue posible guardar el proveedor.');
+            return;
+        }
+
+        modalProveedor.hide();
+        await cargarProveedores();
+        await cargarProductos();
+    });
+}
+
+
+/* =============================================================
  * PRODUCTOS (tab-productos)
  * ============================================================= */
 
@@ -396,7 +638,7 @@ async function cargarProductos() {
     if (!ok) {
         tabla.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center text-danger">
+                <td colspan="9" class="text-center text-danger">
                     ${escaparHtml(data.message || 'No fue posible cargar los productos.')}
                 </td>
             </tr>
@@ -413,7 +655,7 @@ function renderizarTablaProductos(productos) {
     if (productos.length === 0) {
         tabla.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center text-muted">
+                <td colspan="9" class="text-center text-muted">
                     No hay productos registrados.
                 </td>
             </tr>
@@ -432,6 +674,7 @@ function renderizarTablaProductos(productos) {
             </td>
             <td>${escaparHtml(producto.nombre)}</td>
             <td>${escaparHtml(producto.nombre_categoria || 'Sin categoría')}</td>
+            <td>${escaparHtml(producto.nombre_proveedor || 'Sin proveedor')}</td>
             <td>${formatearMoneda(producto.precio)}</td>
             <td>${producto.stock}</td>
             <td>
@@ -493,6 +736,7 @@ function inicializarFormularioProducto() {
             document.getElementById('productoPrecio').value = producto.precio;
             document.getElementById('productoStock').value = producto.stock;
             document.getElementById('productoCategoria').value = producto.id_categoria || '';
+            document.getElementById('productoProveedor').value = producto.id_proveedor || '';
             document.getElementById('productoEstado').value = String(producto.estado);
             document.getElementById('tituloModalProducto').textContent = 'Editar producto';
 
@@ -550,6 +794,7 @@ function inicializarFormularioProducto() {
         const precio = document.getElementById('productoPrecio').value;
         const stock = document.getElementById('productoStock').value;
         const idCategoria = document.getElementById('productoCategoria').value;
+        const idProveedor = document.getElementById('productoProveedor').value;
         const estado = document.getElementById('productoEstado').value;
 
         if (nombre === '' || precio === '' || stock === '') {
@@ -585,6 +830,11 @@ function inicializarFormularioProducto() {
 
         if (idCategoria !== '') {
             formData.append('id_categoria', idCategoria);
+        }
+
+        // Sin proveedor: no se envía el campo y el backend guarda NULL.
+        if (idProveedor !== '') {
+            formData.append('id_proveedor', idProveedor);
         }
 
         // La imagen es opcional en ambos casos: en edición, si se
@@ -837,10 +1087,12 @@ document.addEventListener('DOMContentLoaded', () => {
         inicializarLogout();
         inicializarFormularioCategoria();
         inicializarFormularioProducto();
+        inicializarFormularioProveedor();
         inicializarPedidos();
         inicializarConfirmacionGenerica();
 
         cargarCategorias();
+        cargarProveedores();
         cargarProductos();
         cargarPedidos();
     }

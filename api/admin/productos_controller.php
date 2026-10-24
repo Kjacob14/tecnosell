@@ -304,6 +304,49 @@ function verificarCategoria(PDO $pdo, ?int $idCategoria): void
 
 
 /**
+ * Valida el id de proveedor (opcional: vacío o ausente = sin proveedor).
+ */
+function validarIdProveedor(mixed $idProveedor): ?int
+{
+    if ($idProveedor === null || $idProveedor === '' || $idProveedor === 'null') {
+        return null;
+    }
+
+    $id = filter_var($idProveedor, FILTER_VALIDATE_INT);
+
+    if ($id === false || $id <= 0) {
+        responderJSON(400, [
+            'success' => false,
+            'message' => 'El proveedor seleccionado no es válido.'
+        ]);
+    }
+
+    return $id;
+}
+
+
+/**
+ * Comprueba que el proveedor exista (si se indicó uno).
+ */
+function verificarProveedor(PDO $pdo, ?int $idProveedor): void
+{
+    if ($idProveedor === null) {
+        return;
+    }
+
+    $stmt = $pdo->prepare('SELECT id_proveedor FROM proveedores WHERE id_proveedor = :id LIMIT 1');
+    $stmt->execute([':id' => $idProveedor]);
+
+    if (!$stmt->fetch()) {
+        responderJSON(400, [
+            'success' => false,
+            'message' => 'El proveedor seleccionado no existe.'
+        ]);
+    }
+}
+
+
+/**
  * Procesa la imagen enviada mediante multipart/form-data.
  *
  * Devuelve:
@@ -483,6 +526,8 @@ try {
                     p.id_producto,
                     p.id_categoria,
                     c.nombre_categoria,
+                    p.id_proveedor,
+                    pr.nombre_empresa AS nombre_proveedor,
                     p.nombre,
                     p.descripcion,
                     p.precio,
@@ -492,6 +537,8 @@ try {
                 FROM productos p
                 LEFT JOIN categorias c
                     ON p.id_categoria = c.id_categoria
+                LEFT JOIN proveedores pr
+                    ON p.id_proveedor = pr.id_proveedor
                 WHERE p.id_producto = :id_producto
                 LIMIT 1
             ";
@@ -520,6 +567,8 @@ try {
                         ? (int) $producto['id_categoria']
                         : null,
                     'nombre_categoria' => $producto['nombre_categoria'],
+                    'id_proveedor' => $producto['id_proveedor'] !== null ? (int) $producto['id_proveedor'] : null,
+                    'nombre_proveedor' => $producto['nombre_proveedor'],
                     'nombre' => $producto['nombre'],
                     'descripcion' => $producto['descripcion'],
                     'precio' => $producto['precio'],
@@ -542,6 +591,8 @@ try {
                 p.id_producto,
                 p.id_categoria,
                 c.nombre_categoria,
+                p.id_proveedor,
+                pr.nombre_empresa AS nombre_proveedor,
                 p.nombre,
                 p.descripcion,
                 p.precio,
@@ -551,6 +602,8 @@ try {
             FROM productos p
             LEFT JOIN categorias c
                 ON p.id_categoria = c.id_categoria
+            LEFT JOIN proveedores pr
+                ON p.id_proveedor = pr.id_proveedor
             ORDER BY p.id_producto DESC
         ";
 
@@ -568,6 +621,8 @@ try {
                     ? (int) $producto['id_categoria']
                     : null,
                 'nombre_categoria' => $producto['nombre_categoria'],
+                'id_proveedor' => $producto['id_proveedor'] !== null ? (int) $producto['id_proveedor'] : null,
+                'nombre_proveedor' => $producto['nombre_proveedor'],
                 'nombre' => $producto['nombre'],
                 'descripcion' => $producto['descripcion'],
                 'precio' => $producto['precio'],
@@ -606,8 +661,10 @@ try {
         $stock = validarStock($_POST['stock'] ?? null);
         $idCategoria = validarIdCategoria($_POST['id_categoria'] ?? null);
         $estado = validarEstado($_POST['estado'] ?? 1);
+        $idProveedor = validarIdProveedor($_POST['id_proveedor'] ?? null);
 
         verificarCategoria($pdo, $idCategoria);
+        verificarProveedor($pdo, $idProveedor);
 
         /*
          * Procesar imagen solamente después de validar los demás datos.
@@ -638,6 +695,7 @@ try {
                 UPDATE productos 
                 SET 
                     id_categoria = :id_categoria,
+                    id_proveedor = :id_proveedor,
                     nombre = :nombre,
                     descripcion = :descripcion,
                     precio = :precio,
@@ -650,6 +708,7 @@ try {
             $stmt = $pdo->prepare($sql);
 
             $stmt->bindValue(':id_categoria', $idCategoria, $idCategoria === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+            $stmt->bindValue(':id_proveedor', $idProveedor, $idProveedor === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
             $stmt->bindValue(':nombre', $nombre, PDO::PARAM_STR);
             $stmt->bindValue(':descripcion', $descripcion, $descripcion === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
             $stmt->bindValue(':precio', $precio, PDO::PARAM_STR);
@@ -673,6 +732,7 @@ try {
                 'producto' => [
                     'id_producto' => $idProducto,
                     'id_categoria' => $idCategoria,
+                    'id_proveedor' => $idProveedor,
                     'nombre' => $nombre,
                     'descripcion' => $descripcion,
                     'precio' => $precio,
@@ -689,6 +749,7 @@ try {
             $sql = "
                 INSERT INTO productos (
                     id_categoria,
+                    id_proveedor,
                     nombre,
                     descripcion,
                     precio,
@@ -698,6 +759,7 @@ try {
                 )
                 VALUES (
                     :id_categoria,
+                    :id_proveedor,
                     :nombre,
                     :descripcion,
                     :precio,
@@ -710,6 +772,7 @@ try {
             $stmt = $pdo->prepare($sql);
 
             $stmt->bindValue(':id_categoria', $idCategoria, $idCategoria === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+            $stmt->bindValue(':id_proveedor', $idProveedor, $idProveedor === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
             $stmt->bindValue(':nombre', $nombre, PDO::PARAM_STR);
             $stmt->bindValue(':descripcion', $descripcion, $descripcion === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
             $stmt->bindValue(':precio', $precio, PDO::PARAM_STR);
@@ -727,6 +790,7 @@ try {
                 'producto' => [
                     'id_producto' => $idNuevo,
                     'id_categoria' => $idCategoria,
+                    'id_proveedor' => $idProveedor,
                     'nombre' => $nombre,
                     'descripcion' => $descripcion,
                     'precio' => $precio,
