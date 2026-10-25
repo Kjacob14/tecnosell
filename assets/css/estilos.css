@@ -797,6 +797,102 @@ a:hover {
 }
 
 
+/* --- Bloque: pago-etapas (asistente de pago) --- */
+.pago-etapas {
+    display: flex;
+    justify-content: space-between;
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+}
+
+.pago-etapa {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-texto-tenue);
+    font-size: 0.875rem;
+}
+
+.pago-etapa__numero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    border: 1px solid var(--borde-suave-hover);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.pago-etapa--activa {
+    color: var(--color-texto);
+    font-weight: 600;
+}
+
+.pago-etapa--activa .pago-etapa__numero {
+    background: var(--color-acento);
+    border-color: var(--color-acento);
+    color: var(--color-acento-texto-sobre);
+}
+
+.pago-etapa--completa .pago-etapa__numero {
+    background: var(--color-exito);
+    border-color: var(--color-exito);
+    color: var(--color-acento-texto-sobre);
+}
+
+.pago-progreso {
+    height: 0.5rem;
+    margin-bottom: 1.25rem;
+    background: var(--superficie-activa);
+}
+
+.pago-progreso .progress-bar {
+    background: var(--color-acento);
+    transition: width 0.3s ease;
+}
+
+.pago-metodo {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--borde-suave-hover);
+    border-radius: 0.75rem;
+    cursor: pointer;
+}
+
+.pago-metodo:hover {
+    background: var(--superficie-hover);
+}
+
+.pago-metodo:has(input:checked) {
+    border-color: var(--color-acento);
+    background: var(--superficie-activa);
+}
+
+.pago-metodo:has(input:focus-visible) {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+}
+
+.pago-resumen__fila {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--borde-suave);
+}
+
+@media (max-width: 420px) {
+    .pago-etapa__nombre {
+        display: none;
+    }
+}
+
 /* --- Bloque: filtro-categoria ---
    Botones de filtro por categoría en el catálogo público. */
 

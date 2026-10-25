@@ -385,6 +385,43 @@
 
 
     <!-- ============================================================
+         MODAL: PAGO POR ETAPAS (revisar, método de pago, confirmar)
+         ============================================================ -->
+    <div class="modal fade" id="modalPago" tabindex="-1" aria-labelledby="tituloModalPago" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tituloModalPago">Finalizar compra</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <ol class="pago-etapas" id="pagoEtapas" aria-label="Etapas del pago">
+                        <li class="pago-etapa" data-etapa="1"><span class="pago-etapa__numero">1</span><span class="pago-etapa__nombre">Revisar</span></li>
+                        <li class="pago-etapa" data-etapa="2"><span class="pago-etapa__numero">2</span><span class="pago-etapa__nombre">Pago</span></li>
+                        <li class="pago-etapa" data-etapa="3"><span class="pago-etapa__numero">3</span><span class="pago-etapa__nombre">Confirmar</span></li>
+                    </ol>
+
+                    <div class="progress pago-progreso" role="progressbar" aria-label="Progreso del pago" aria-valuemin="0" aria-valuemax="100" aria-valuenow="33" id="pagoProgresoContenedor">
+                        <div class="progress-bar" id="pagoProgresoBarra" style="width: 33%"></div>
+                    </div>
+
+                    <div id="pagoContenido" aria-live="polite"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btnPagoAtras">Atrás</button>
+                    <button type="button" class="btn btn-primary" id="btnPagoSiguiente">
+                        <span class="spinner-border spinner-border-sm d-none" id="spinnerPago" role="status" aria-hidden="true"></span>
+                        <span id="textoBtnPagoSiguiente">Continuar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============================================================
          MODAL: RESULTADO DEL CHECKOUT (éxito / conflicto de stock)
          ============================================================ -->
     <div class="modal fade" id="modalCheckout" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">

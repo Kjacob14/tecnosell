@@ -783,6 +783,9 @@ function inicializarNavegacionADetalle() {
  *   login.html y simplemente deja el carrito/contador vacíos,
  *   sin mostrar mensaje de error al visitante anónimo.
  */
+// Última respuesta del carrito: el asistente de pago la usa para el resumen.
+let ultimoCarrito = { total_articulos: 0, subtotal: '0.00', carrito: [] };
+
 async function cargarCarrito(silentFail = false) {
     const contenedor = document.getElementById('contenidoCarrito');
 
@@ -857,6 +860,7 @@ function inicializarLogout() {
  * @param {{total_articulos: number, subtotal: string, carrito: Array}} data
  */
 function renderizarCarrito(data) {
+    ultimoCarrito = data;
     const contenedor = document.getElementById('contenidoCarrito');
     const totalCarrito = document.getElementById('totalCarrito');
     const contador = document.getElementById('contadorCarrito');
@@ -1274,9 +1278,7 @@ function inicializarPedidos() {
  *   afectados con su stock real para que el usuario decida.
  * - 401 lo intercepta el helper peticionApi y redirige a login.html.
  */
-async function procesarCheckout() {
-    const btnPagar = document.getElementById('btnIrPagar');
-    const spinner = document.getElementById('spinnerCheckout');
+async function procesarCheckout(btnPagar, spinner) {
 
     btnPagar.disabled = true;
     spinner.classList.remove('d-none');
@@ -1287,6 +1289,10 @@ async function procesarCheckout() {
 
     btnPagar.disabled = false;
     spinner.classList.add('d-none');
+
+    // Se espera a que el asistente termine de cerrarse antes de abrir el
+    // resultado, para no encimar dos modales de Bootstrap.
+    await cerrarAsistentePago();
 
     if (ok) {
         mostrarResultadoCheckoutExito(data.pedido);
@@ -1407,8 +1413,195 @@ function mostrarResultadoCheckoutError(mensaje) {
     new bootstrap.Modal(document.getElementById('modalCheckout')).show();
 }
 
+const METODOS_PAGO = {
+    tarjeta: { nombre: 'Tarjeta de crédito o débito', detalle: 'Pagas al coordinar la entrega con la tienda.' },
+    transferencia: { nombre: 'Transferencia bancaria', detalle: 'La tienda te enviará los datos para transferir.' },
+    efectivo: { nombre: 'Efectivo contra entrega', detalle: 'Pagas en efectivo al recibir tu pedido.' }
+};
+
+const ETAPAS_PAGO = [
+    { titulo: 'Revisa tu pedido', siguiente: 'Continuar' },
+    { titulo: 'Elige cómo pagar', siguiente: 'Continuar' },
+    { titulo: 'Confirma tu compra', siguiente: 'Confirmar y pagar' }
+];
+
+let etapaPago = 1;
+let metodoPagoElegido = '';
+let modalPago = null;
+
+function etapaPagoHtml(etapa) {
+    const items = ultimoCarrito.carrito || [];
+
+    if (etapa === 1) {
+        const filas = items.map((item) => `
+            <div class="pago-resumen__fila">
+                <span>${escaparHtml(item.nombre)} <span class="text-muted">× ${item.cantidad}</span></span>
+                <span>${formatearMoneda(Number(item.precio) * item.cantidad)}</span>
+            </div>
+        `).join('');
+
+        return `
+            <h6 class="mb-3" tabindex="-1" id="pagoTituloEtapa">${ETAPAS_PAGO[0].titulo}</h6>
+            ${filas}
+            <div class="d-flex justify-content-between mt-3">
+                <strong>Total</strong>
+                <strong>${formatearMoneda(ultimoCarrito.subtotal || 0)}</strong>
+            </div>
+        `;
+    }
+
+    if (etapa === 2) {
+        const opciones = Object.entries(METODOS_PAGO).map(([clave, metodo]) => `
+            <label class="pago-metodo">
+                <input
+                    type="radio"
+                    class="form-check-input mt-1"
+                    name="metodoPago"
+                    value="${clave}"
+                    ${metodoPagoElegido === clave ? 'checked' : ''}
+                >
+                <span>
+                    <strong class="d-block">${metodo.nombre}</strong>
+                    <span class="text-muted small">${metodo.detalle}</span>
+                </span>
+            </label>
+        `).join('');
+
+        return `
+            <h6 class="mb-3" tabindex="-1" id="pagoTituloEtapa">${ETAPAS_PAGO[1].titulo}</h6>
+            ${opciones}
+            <div id="pagoErrorEtapa" class="text-danger small mt-2 d-none" role="alert"></div>
+        `;
+    }
+
+    return `
+        <h6 class="mb-3" tabindex="-1" id="pagoTituloEtapa">${ETAPAS_PAGO[2].titulo}</h6>
+        <div class="pago-resumen__fila">
+            <span class="text-muted">Artículos</span>
+            <span>${ultimoCarrito.total_articulos}</span>
+        </div>
+        <div class="pago-resumen__fila">
+            <span class="text-muted">Método de pago</span>
+            <span>${METODOS_PAGO[metodoPagoElegido].nombre}</span>
+        </div>
+        <div class="d-flex justify-content-between mt-3">
+            <strong>Total a pagar</strong>
+            <strong>${formatearMoneda(ultimoCarrito.subtotal || 0)}</strong>
+        </div>
+        <p class="text-muted small mt-3 mb-0">
+            Al confirmar, tu pedido queda registrado como pendiente y se descuenta el inventario.
+        </p>
+    `;
+}
+
+function mostrarEtapaPago(etapa) {
+    etapaPago = etapa;
+    const total = ETAPAS_PAGO.length;
+    const porcentaje = Math.round((etapa / total) * 100);
+
+    document.getElementById('pagoContenido').innerHTML = etapaPagoHtml(etapa);
+
+    const barra = document.getElementById('pagoProgresoBarra');
+    barra.style.width = `${porcentaje}%`;
+    document.getElementById('pagoProgresoContenedor').setAttribute('aria-valuenow', String(porcentaje));
+
+    document.querySelectorAll('#pagoEtapas .pago-etapa').forEach((elemento) => {
+        const numero = Number(elemento.dataset.etapa);
+        elemento.classList.toggle('pago-etapa--activa', numero === etapa);
+        elemento.classList.toggle('pago-etapa--completa', numero < etapa);
+
+        if (numero === etapa) {
+            elemento.setAttribute('aria-current', 'step');
+        } else {
+            elemento.removeAttribute('aria-current');
+        }
+    });
+
+    document.getElementById('btnPagoAtras').classList.toggle('invisible', etapa === 1);
+    document.getElementById('textoBtnPagoSiguiente').textContent = ETAPAS_PAGO[etapa - 1].siguiente;
+
+    const titulo = document.getElementById('pagoTituloEtapa');
+    if (titulo) {
+        titulo.focus();
+    }
+}
+
+function abrirAsistentePago() {
+    const items = ultimoCarrito.carrito || [];
+
+    if (items.length === 0) {
+        mostrarAlertaGlobal('Tu carrito está vacío.', 'warning');
+        return;
+    }
+
+    if (items.some((item) => !item.activo)) {
+        mostrarAlertaGlobal('Quita del carrito los productos que ya no están disponibles para continuar.', 'warning');
+        return;
+    }
+
+    metodoPagoElegido = '';
+
+    const offcanvasCarrito = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasCarrito'));
+    if (offcanvasCarrito) {
+        offcanvasCarrito.hide();
+    }
+
+    modalPago = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPago'));
+    mostrarEtapaPago(1);
+    modalPago.show();
+}
+
+function cerrarAsistentePago() {
+    const elemento = document.getElementById('modalPago');
+
+    if (!modalPago || !elemento.classList.contains('show')) {
+        return Promise.resolve();
+    }
+
+    return new Promise((resolver) => {
+        elemento.addEventListener('hidden.bs.modal', () => resolver(), { once: true });
+        modalPago.hide();
+    });
+}
+
+async function avanzarEtapaPago() {
+    if (etapaPago === 2) {
+        const elegido = document.querySelector('input[name="metodoPago"]:checked');
+
+        if (!elegido) {
+            const error = document.getElementById('pagoErrorEtapa');
+            error.textContent = 'Elige un método de pago para continuar.';
+            error.classList.remove('d-none');
+            return;
+        }
+
+        metodoPagoElegido = elegido.value;
+    }
+
+    if (etapaPago < ETAPAS_PAGO.length) {
+        mostrarEtapaPago(etapaPago + 1);
+        return;
+    }
+
+    // Última etapa: se confirma la compra.
+    const boton = document.getElementById('btnPagoSiguiente');
+    const spinner = document.getElementById('spinnerPago');
+    document.getElementById('btnPagoAtras').disabled = true;
+
+    await procesarCheckout(boton, spinner);
+
+    document.getElementById('btnPagoAtras').disabled = false;
+}
+
 function inicializarCheckout() {
-    document.getElementById('btnIrPagar').addEventListener('click', procesarCheckout);
+    document.getElementById('btnIrPagar').addEventListener('click', abrirAsistentePago);
+    document.getElementById('btnPagoSiguiente').addEventListener('click', avanzarEtapaPago);
+
+    document.getElementById('btnPagoAtras').addEventListener('click', () => {
+        if (etapaPago > 1) {
+            mostrarEtapaPago(etapaPago - 1);
+        }
+    });
 }
 
 
