@@ -1,7 +1,7 @@
 -- ============================================================
 -- Migración: proveedores
 -- Ejecutar una sola vez en phpMyAdmin (base de datos de TecnoSell),
--- pestaña "SQL". Compatible con MariaDB de XAMPP.
+-- pestaña "SQL". Funciona en MySQL y MariaDB. Ejecutar una sola vez.
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS proveedores (
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS proveedores (
 -- Relación opcional: un producto puede tener un proveedor.
 -- Si se elimina el proveedor, el producto se conserva (queda sin proveedor).
 ALTER TABLE productos
-    ADD COLUMN IF NOT EXISTS id_proveedor INT UNSIGNED NULL;
+    ADD COLUMN id_proveedor INT UNSIGNED NULL;
 
 ALTER TABLE productos
     ADD CONSTRAINT fk_productos_proveedor
