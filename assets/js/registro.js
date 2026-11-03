@@ -38,6 +38,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRegistro = document.getElementById('btnRegistro');
     const spinnerRegistro = document.getElementById('spinnerRegistro');
 
+    // Requisitos de contraseña. Deben coincidir con requisitosFaltantes()
+    // de api/auth/registro_controller.php: aquí solo se muestra el avance,
+    // quien decide es el servidor.
+    const REQUISITOS_PASSWORD = {
+        longitud: (p) => Array.from(p).length >= 8,
+        mayuscula: (p) => /\p{Lu}/u.test(p),
+        numero: (p) => /\d/.test(p),
+        especial: (p) => /[^\p{L}\p{N}\s]/u.test(p)
+    };
+
+    const inputPassword = document.getElementById('password');
+    const listaRequisitos = document.getElementById('requisitosPassword');
+
+    /**
+     * Marca cada requisito como cumplido o pendiente según lo escrito.
+     * @returns {boolean} true si se cumplen todos.
+     */
+    function actualizarRequisitos() {
+        if (!listaRequisitos) {
+            return true;
+        }
+
+        const valor = inputPassword.value;
+        let todosCumplidos = true;
+
+        listaRequisitos.querySelectorAll('li[data-requisito]').forEach((item) => {
+            const cumple = REQUISITOS_PASSWORD[item.dataset.requisito](valor);
+
+            todosCumplidos = todosCumplidos && cumple;
+            item.classList.toggle('requisito--cumplido', cumple);
+            item.querySelector('i').className = cumple ? 'bi bi-check-circle-fill' : 'bi bi-circle';
+            item.querySelector('.estado-requisito').textContent = cumple ? '(cumplido)' : '(pendiente)';
+        });
+
+        return todosCumplidos;
+    }
+
+    inputPassword.addEventListener('input', actualizarRequisitos);
+
     formRegistro.addEventListener('submit', async (evento) => {
         evento.preventDefault();
         alertaRegistro.classList.add('d-none');
@@ -48,6 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (nombre === '' || email === '' || password === '') {
             mostrarAlerta(alertaRegistro, 'Todos los campos son obligatorios.', 'danger');
+            return;
+        }
+
+        if (!actualizarRequisitos()) {
+            mostrarAlerta(alertaRegistro, 'La contraseña no cumple todos los requisitos de seguridad.', 'danger');
+            inputPassword.focus();
             return;
         }
 

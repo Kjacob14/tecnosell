@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,34 +16,72 @@
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
     >
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        rel="stylesheet"
+    >
     <link rel="stylesheet" href="assets/css/estilos.css">
+    <script src="assets/js/tema.js"></script>
 </head>
 <body class="bg-body-tertiary">
 
     <!-- ============================================================
          BARRA DE NAVEGACIÓN
          ============================================================ -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">Tienda Electrónica · Admin</span>
+    <div class="container">
+        <nav class="navbar navbar-dark navbar-flotante">
+            <div class="container-fluid px-2 d-flex justify-content-between align-items-center">
+                <span class="navbar-brand mb-0">TecnoSell <span class="admin-etiqueta">Admin</span></span>
 
-            <div class="d-flex align-items-center">
-                <span id="nombreUsuarioActivo" class="text-light me-3 small"></span>
-                <button id="btnLogout" class="btn btn-outline-light btn-sm">
-                    Cerrar sesión
-                </button>
+                <div class="d-flex align-items-center gap-1">
+                    <span
+                        id="nombreUsuarioActivo"
+                        class="small me-2 d-none d-md-inline"
+                        style="color: var(--color-texto-tenue);"
+                    ></span>
+
+                    <button
+                        type="button"
+                        class="navbar-flotante__icono"
+                        data-accion="alternar-tema"
+                        title="Cambiar tema"
+                        aria-label="Cambiar tema"
+                    >
+                        <i class="bi bi-sun"></i>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="navbar-flotante__icono"
+                        data-accion="tamano-texto"
+                        title="Tamaño de texto"
+                        aria-label="Tamaño de texto"
+                    >
+                        <i class="bi bi-type"></i>
+                    </button>
+
+                    <button
+                        id="btnLogout"
+                        type="button"
+                        class="navbar-flotante__icono"
+                        title="Cerrar sesión"
+                        aria-label="Cerrar sesión"
+                    >
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+    </div>
 
-    <div class="container-fluid px-4">
+    <div class="container pb-5">
 
         <div id="alertaGlobal" class="alert d-none" role="alert"></div>
 
         <!-- ============================================================
              PESTAÑAS
              ============================================================ -->
-        <ul class="nav nav-tabs mb-4" id="tabsAdmin" role="tablist">
+        <ul class="nav tabs-admin mb-4" id="tabsAdmin" role="tablist">
             <li class="nav-item" role="presentation">
                 <button
                     class="nav-link active"
@@ -71,6 +109,18 @@
             <li class="nav-item" role="presentation">
                 <button
                     class="nav-link"
+                    id="tab-proveedores-btn"
+                    data-bs-toggle="tab"
+                    data-bs-target="#tab-proveedores"
+                    type="button"
+                    role="tab"
+                >
+                    Proveedores
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button
+                    class="nav-link"
                     id="tab-pedidos-btn"
                     data-bs-toggle="tab"
                     data-bs-target="#tab-pedidos"
@@ -92,7 +142,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="h5 m-0">Productos</h2>
                     <button
-                        class="btn btn-success btn-sm"
+                        class="btn-base btn-base--primario btn-base--pequeno"
                         data-bs-toggle="modal"
                         data-bs-target="#modalProducto"
                         id="btnNuevoProducto"
@@ -101,7 +151,7 @@
                     </button>
                 </div>
 
-                <div class="table-responsive">
+                <div class="table-responsive panel-admin">
                     <table class="table table-striped align-middle">
                         <thead>
                             <tr>
@@ -109,6 +159,7 @@
                                 <th>Imagen</th>
                                 <th>Nombre</th>
                                 <th>Categoría</th>
+                                <th>Proveedor</th>
                                 <th>Precio</th>
                                 <th>Stock</th>
                                 <th>Estado</th>
@@ -117,7 +168,7 @@
                         </thead>
                         <tbody id="tablaProductos">
                             <tr>
-                                <td colspan="8" class="text-center text-muted">
+                                <td colspan="9" class="text-center text-muted">
                                     Cargando productos...
                                 </td>
                             </tr>
@@ -135,7 +186,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="h5 m-0">Categorías</h2>
                     <button
-                        class="btn btn-success btn-sm"
+                        class="btn-base btn-base--primario btn-base--pequeno"
                         data-bs-toggle="modal"
                         data-bs-target="#modalCategoria"
                         id="btnNuevaCategoria"
@@ -144,7 +195,7 @@
                     </button>
                 </div>
 
-                <div class="table-responsive">
+                <div class="table-responsive panel-admin">
                     <table class="table table-striped align-middle">
                         <thead>
                             <tr>
@@ -166,13 +217,66 @@
             </div>
 
             <!-- ========================================================
+                 TAB: PROVEEDORES
+                 ======================================================== -->
+            <div class="tab-pane fade" id="tab-proveedores" role="tabpanel">
+
+                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+                    <h2 class="h5 m-0">Proveedores</h2>
+                    <div class="d-flex flex-wrap gap-2">
+                        <input
+                            type="search"
+                            class="form-control form-control-sm"
+                            id="buscadorProveedores"
+                            placeholder="Buscar por empresa, contacto o correo"
+                            aria-label="Buscar proveedores"
+                            maxlength="100"
+                            style="min-width: 16rem;"
+                        >
+                        <button
+                            class="btn-base btn-base--primario btn-base--pequeno"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalProveedor"
+                            id="btnNuevoProveedor"
+                        >
+                            + Nuevo proveedor
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive panel-admin">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Empresa</th>
+                                <th>Contacto</th>
+                                <th>Teléfono</th>
+                                <th>Correo</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaProveedores">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">
+                                    Cargando proveedores...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- ========================================================
                  TAB: PEDIDOS
                  ======================================================== -->
             <div class="tab-pane fade" id="tab-pedidos" role="tabpanel">
 
                 <h2 class="h5 mb-3">Pedidos</h2>
 
-                <div class="table-responsive">
+                <div class="table-responsive panel-admin">
                     <table class="table table-striped align-middle">
                         <thead>
                             <tr>
@@ -252,6 +356,13 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="productoProveedor" class="form-label">Proveedor</label>
+                            <select class="form-select" id="productoProveedor">
+                                <option value="">Sin proveedor</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="productoEstado" class="form-label">Estado</label>
                             <select class="form-select" id="productoEstado">
                                 <option value="1">Activo</option>
@@ -325,6 +436,75 @@
                                 role="status"
                                 aria-hidden="true"
                             ></span>
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============================================================
+         MODAL: PROVEEDOR (crear / editar)
+         ============================================================ -->
+    <div class="modal fade" id="modalProveedor" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form id="formProveedor" novalidate method="dialog">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="tituloModalProveedor">Nuevo proveedor</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div id="alertaFormProveedor" class="alert alert-danger d-none" role="alert"></div>
+
+                        <input type="hidden" id="proveedorId" value="">
+
+                        <div class="mb-3">
+                            <label for="proveedorEmpresa" class="form-label">Nombre de la empresa</label>
+                            <input type="text" class="form-control" id="proveedorEmpresa" maxlength="100" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="proveedorContacto" class="form-label">Persona de contacto</label>
+                            <input type="text" class="form-control" id="proveedorContacto" maxlength="100">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="proveedorTelefono" class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="proveedorTelefono" maxlength="20">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="proveedorEmail" class="form-label">Correo</label>
+                                <input type="email" class="form-control" id="proveedorEmail" maxlength="100">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="proveedorDireccion" class="form-label">Dirección</label>
+                            <input type="text" class="form-control" id="proveedorDireccion" maxlength="255">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="proveedorEstado" class="form-label">Estado</label>
+                            <select class="form-select" id="proveedorEstado">
+                                <option value="1">Activo</option>
+                                <option value="0">Inactivo</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardarProveedor">
+                            <span class="spinner-border spinner-border-sm d-none" id="spinnerProveedor" role="status" aria-hidden="true"></span>
                             Guardar
                         </button>
                     </div>

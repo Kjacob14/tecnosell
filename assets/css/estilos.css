@@ -83,6 +83,61 @@
 
     --transicion-rapida: 150ms ease;
     --transicion-media: 250ms ease;
+
+    /* --- Superficies translúcidas y sombras que cambian con el tema --- */
+    --fondo-nav: rgba(19, 23, 34, 0.75);
+    --borde-nav: rgba(255, 255, 255, 0.08);
+    --superficie-hover: rgba(255, 255, 255, 0.06);
+    --superficie-activa: rgba(255, 255, 255, 0.08);
+    --borde-suave: rgba(255, 255, 255, 0.05);
+    --borde-suave-hover: rgba(255, 255, 255, 0.1);
+    --franja-tabla: rgba(255, 255, 255, 0.02);
+    --sombra-hover: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Tamaño base del texto. tema.js cambia --tamano-base (100%, 115% o 130%);
+   como el sitio usa rem, todo el texto escala junto. */
+html {
+    font-size: var(--tamano-base, 100%);
+}
+
+/* TEMA CLARO
+   tema.js pone data-bs-theme="light" en <html>. Solo se redefinen las
+   variables de la Sección 1: el resto del archivo ya las consume. Los
+   acentos y los colores de estado se oscurecen para mantener contraste
+   suficiente sobre fondo blanco. */
+[data-bs-theme="light"] {
+    --color-fondo: #f3f5fa;
+    --color-fondo-elevado: #ffffff;
+    --color-fondo-tarjeta: #ffffff;
+    --color-borde: #d9dfeb;
+    --color-borde-hover: #b4bed2;
+
+    --color-texto: #131a2a;
+    --color-texto-tenue: #4a5468;
+    --color-texto-apagado: #5f6a80;
+
+    --color-acento: #2f5fe0;
+    --color-acento-hover: #234bc0;
+    --color-acento-texto-sobre: #ffffff;
+    --color-acento-2: #08796a;
+
+    --color-exito: #11724e;
+    --color-advertencia: #9a5b00;
+    --color-peligro: #d02f46;
+
+    --sombra-tarjeta: 0 2px 12px rgba(19, 26, 42, 0.08);
+    --sombra-elevada: 0 8px 30px rgba(19, 26, 42, 0.14);
+    --sombra-acento: 0 0 0 3px rgba(47, 95, 224, 0.25);
+
+    --fondo-nav: rgba(255, 255, 255, 0.82);
+    --borde-nav: rgba(19, 26, 42, 0.12);
+    --superficie-hover: rgba(19, 26, 42, 0.06);
+    --superficie-activa: rgba(19, 26, 42, 0.1);
+    --borde-suave: rgba(19, 26, 42, 0.08);
+    --borde-suave-hover: rgba(19, 26, 42, 0.18);
+    --franja-tabla: rgba(19, 26, 42, 0.03);
+    --sombra-hover: 0 12px 40px rgba(19, 26, 42, 0.16);
 }
 
 
@@ -118,19 +173,7 @@ a:hover {
     background-color: var(--color-fondo) !important;
 }
 
-.navbar-dark.bg-dark {
-    position: sticky;
-    top: 0;
-    z-index: 1030;
-    background-color: rgba(19, 23, 34, 0.7) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* --- Navbar flotante tipo píldora (solo tienda pública) ---
-   Separada de .navbar-dark.bg-dark para no afectar admin.html,
-   que conserva la barra sólida de ancho completo. */
+/* --- Navbar flotante tipo píldora (tienda y panel admin) --- */
 
 .navbar-flotante {
     position: sticky;
@@ -138,10 +181,10 @@ a:hover {
     z-index: 1030;
     margin: var(--espacio-4) auto;
     max-width: 1200px;
-    background-color: rgba(19, 23, 34, 0.75);
+    background-color: var(--fondo-nav);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--borde-nav);
     border-radius: 999px;
     box-shadow: var(--sombra-elevada);
     padding: var(--espacio-2) var(--espacio-5);
@@ -149,6 +192,12 @@ a:hover {
 
 .navbar-flotante .navbar-brand {
     font-size: 1.1rem;
+    color: var(--color-texto);
+}
+
+/* En tema claro, el ícono de hamburguesa (blanco por navbar-dark) se invierte. */
+[data-bs-theme="light"] .navbar-flotante .navbar-toggler-icon {
+    filter: invert(1);
 }
 
 /* Enlaces centrales (Home / Productos / Soporte) */
@@ -165,12 +214,12 @@ a:hover {
 .navbar-flotante__enlace:hover,
 .navbar-flotante__enlace:focus {
     color: var(--color-texto);
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: var(--superficie-hover);
 }
 
 .navbar-flotante__enlace.active {
     color: var(--color-texto);
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: var(--superficie-activa);
 }
 
 /* Íconos de acción (buscar, cuenta, carrito) */
@@ -190,7 +239,7 @@ a:hover {
 
 .navbar-flotante__icono:hover {
     color: var(--color-texto);
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: var(--superficie-hover);
 }
 
 /* Dropdown de categorías dentro de "Productos" */
@@ -216,7 +265,7 @@ a:hover {
 
 .navbar-flotante .dropdown-item:hover,
 .navbar-flotante .dropdown-item:focus {
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: var(--superficie-hover);
     color: var(--color-texto);
 }
 
@@ -246,7 +295,7 @@ a:hover {
 }
 
 .buscador-panel__resultado:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--superficie-hover);
 }
 
 .buscador-panel__resultado-imagen {
@@ -314,7 +363,7 @@ a:hover {
 }
 
 .table-striped > tbody > tr:nth-of-type(odd) > * {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: var(--franja-tabla);
 }
 
 .modal-content {
@@ -500,7 +549,7 @@ a:hover {
 
 .producto-card {
     background-color: var(--color-fondo-tarjeta);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--borde-suave);
     border-radius: var(--radio-lg);
     overflow: hidden;
     transition: transform var(--transicion-media),
@@ -510,9 +559,9 @@ a:hover {
 }
 
 .producto-card:hover {
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--borde-suave-hover);
     transform: translateY(-6px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--sombra-hover);
 }
 
 .producto-card__imagen {
@@ -630,9 +679,219 @@ a:hover {
 .acceso-volver:hover,
 .acceso-volver:focus {
     color: var(--color-texto);
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: var(--superficie-hover);
 }
 
+
+/* --- Bloque: requisitos-password ---
+   Lista de requisitos que se marcan en vivo al escribir la contraseña
+   (registro.html). */
+
+.requisitos-password {
+    list-style: none;
+    margin: var(--espacio-2) 0 0;
+    padding: 0;
+    font-size: 0.8rem;
+}
+
+.requisitos-password li {
+    display: flex;
+    align-items: center;
+    gap: var(--espacio-2);
+    color: var(--color-texto-tenue);
+    transition: color var(--transicion-rapida);
+}
+
+.requisitos-password li.requisito--cumplido {
+    color: var(--color-exito);
+}
+
+
+/* --- Panel de administración (admin.html) ---
+   Mismos componentes que la tienda: barra flotante, pestañas tipo píldora
+   (como los filtros de categoría) y tablas dentro de tarjetas. */
+
+.admin-etiqueta {
+    margin-left: var(--espacio-2);
+    padding: 2px var(--espacio-2);
+    border: 1px solid var(--color-borde);
+    border-radius: 999px;
+    color: var(--color-texto-tenue);
+    font-family: var(--fuente-cuerpo);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.tabs-admin {
+    gap: var(--espacio-2);
+    flex-wrap: wrap;
+}
+
+.tabs-admin .nav-link {
+    background-color: transparent;
+    border: 1px solid var(--color-borde);
+    border-radius: 999px;
+    padding: var(--espacio-1) var(--espacio-4);
+    color: var(--color-texto-tenue);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all var(--transicion-rapida);
+}
+
+.tabs-admin .nav-link:hover {
+    border-color: var(--color-acento);
+    color: var(--color-texto);
+}
+
+.tabs-admin .nav-link.active {
+    background-color: var(--color-acento);
+    border-color: var(--color-acento);
+    color: var(--color-acento-texto-sobre);
+}
+
+.panel-admin {
+    background-color: var(--color-fondo-tarjeta);
+    border: 1px solid var(--borde-suave);
+    border-radius: var(--radio-lg);
+    padding: var(--espacio-3) var(--espacio-4);
+}
+
+.panel-admin .table {
+    margin-bottom: 0;
+}
+
+.panel-admin .table thead th {
+    color: var(--color-texto-tenue);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.btn-base--pequeno {
+    padding: var(--espacio-2) var(--espacio-4);
+    font-size: 0.85rem;
+}
+
+
+/* --- Bloque: controles-accesibilidad ---
+   Botones de tema y tamaño de texto en las pantallas sin barra de
+   navegación (login y registro). */
+
+.controles-accesibilidad {
+    position: fixed;
+    top: var(--espacio-4);
+    right: var(--espacio-4);
+    z-index: 1030;
+    display: flex;
+    gap: var(--espacio-1);
+    padding: var(--espacio-1);
+    background-color: var(--fondo-nav);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--borde-nav);
+    border-radius: 999px;
+}
+
+
+/* --- Bloque: pago-etapas (asistente de pago) --- */
+.pago-etapas {
+    display: flex;
+    justify-content: space-between;
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+}
+
+.pago-etapa {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-texto-tenue);
+    font-size: 0.875rem;
+}
+
+.pago-etapa__numero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    border: 1px solid var(--borde-suave-hover);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.pago-etapa--activa {
+    color: var(--color-texto);
+    font-weight: 600;
+}
+
+.pago-etapa--activa .pago-etapa__numero {
+    background: var(--color-acento);
+    border-color: var(--color-acento);
+    color: var(--color-acento-texto-sobre);
+}
+
+.pago-etapa--completa .pago-etapa__numero {
+    background: var(--color-exito);
+    border-color: var(--color-exito);
+    color: var(--color-acento-texto-sobre);
+}
+
+.pago-progreso {
+    height: 0.5rem;
+    margin-bottom: 1.25rem;
+    background: var(--superficie-activa);
+}
+
+.pago-progreso .progress-bar {
+    background: var(--color-acento);
+    transition: width 0.3s ease;
+}
+
+.pago-metodo {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--borde-suave-hover);
+    border-radius: 0.75rem;
+    cursor: pointer;
+}
+
+.pago-metodo:hover {
+    background: var(--superficie-hover);
+}
+
+.pago-metodo:has(input:checked) {
+    border-color: var(--color-acento);
+    background: var(--superficie-activa);
+}
+
+.pago-metodo:has(input:focus-visible) {
+    outline: 2px solid var(--color-acento);
+    outline-offset: 2px;
+}
+
+.pago-resumen__fila {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--borde-suave);
+}
+
+@media (max-width: 420px) {
+    .pago-etapa__nombre {
+        display: none;
+    }
+}
 
 /* --- Bloque: filtro-categoria ---
    Botones de filtro por categoría en el catálogo público. */
@@ -745,7 +1004,7 @@ a:hover {
 
 .pedido-card {
     background-color: var(--color-fondo-tarjeta);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--borde-suave);
     border-radius: var(--radio-lg);
     padding: var(--espacio-4);
     margin-bottom: var(--espacio-4);
@@ -853,9 +1112,15 @@ a:hover {
     border-color: var(--color-acento);
 }
 
-.estado-pedido--enviado {
+.estado-pedido--enviado,
+.estado-pedido--activo {
     color: var(--color-exito);
     border-color: var(--color-exito);
+}
+
+/* En las tablas del panel admin el estado llega en minúsculas. */
+.panel-admin .estado-pedido {
+    text-transform: capitalize;
 }
 
 
@@ -983,7 +1248,7 @@ a:hover {
 
 .bento-card {
     background-color: var(--color-fondo-tarjeta);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--borde-suave);
     border-radius: var(--radio-lg);
     overflow: hidden;
     height: 100%;
@@ -993,7 +1258,7 @@ a:hover {
 }
 
 .bento-card:hover {
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--borde-suave-hover);
     transform: translateY(-5px);
     box-shadow: var(--sombra-elevada);
 }
@@ -1002,6 +1267,16 @@ a:hover {
     background-size: cover;
     background-position: center;
     min-height: 280px;
+}
+
+/* La tarjeta con foto lleva un degradado oscuro encima, así que su texto
+   se queda claro tanto en tema oscuro como en tema claro. */
+.bento-card--imagen .bento-card__titulo {
+    color: #ffffff;
+}
+
+.bento-card--imagen .bento-card__texto {
+    color: rgba(255, 255, 255, 0.82);
 }
 
 .bento-card__titulo {
