@@ -22,6 +22,7 @@
     >
     <link rel="stylesheet" href="assets/css/estilos.css">
     <script src="assets/js/tema.js"></script>
+    <script src="assets/js/imagen_respaldo.js"></script>
 </head>
 <body class="bg-body-tertiary">
 
@@ -294,6 +295,12 @@
             <div class="mb-4">
                 <div id="filtrosCategorias" class="d-flex flex-wrap gap-2">
                     <button class="btn btn-sm btn-primary btn-filtro-categoria" data-id-categoria="">Todas</button>
+                </div>
+                <div class="filtro-proveedor mt-3 d-none" id="grupoFiltroProveedor">
+                    <label for="filtroProveedor" class="filtro-proveedor__etiqueta">Proveedor</label>
+                    <select class="form-select form-select-sm filtro-proveedor__select" id="filtroProveedor">
+                        <option value="">Todos los proveedores</option>
+                    </select>
                 </div>
             </div>
             <div id="catalogoProductos" class="row g-4">

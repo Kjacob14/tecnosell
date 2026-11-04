@@ -893,6 +893,30 @@ a:hover {
     }
 }
 
+/* --- Bloque: filtro-proveedor --- */
+.filtro-proveedor {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.filtro-proveedor__etiqueta {
+    color: var(--color-texto-tenue);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.filtro-proveedor__select {
+    max-width: 18rem;
+}
+
+/* --- Bloque: imagen-respaldo (foto que no carga) --- */
+img.imagen-respaldo {
+    object-fit: contain;
+    background: var(--superficie-activa);
+    padding: 0.5rem;
+}
+
 /* --- Bloque: filtro-categoria ---
    Botones de filtro por categoría en el catálogo público. */
 

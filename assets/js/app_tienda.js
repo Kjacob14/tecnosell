@@ -58,6 +58,7 @@ const ENDPOINTS = {
 // categorías disponibles sin necesitar un endpoint público aparte.
 let catalogoCompleto = [];
 let categoriaActiva = '';
+let proveedorActivo = '';
 
 
 /* =============================================================
@@ -285,6 +286,7 @@ async function cargarCatalogoInicial() {
     catalogoCompleto = data.productos || [];
     renderizarFiltrosCategorias(catalogoCompleto);
     renderizarDropdownCategorias(catalogoCompleto);
+    renderizarFiltroProveedores(catalogoCompleto);
     renderizarCatalogo(catalogoCompleto);
 }
 
@@ -304,8 +306,19 @@ async function cargarCatalogoPorCategoria(idCategoria) {
         </div>
     `;
 
-    const url = idCategoria
-        ? `${ENDPOINTS.catalogo}?id_categoria=${encodeURIComponent(idCategoria)}`
+    // Categoría y proveedor se combinan: ambos filtros los resuelve el servidor.
+    const parametros = new URLSearchParams();
+
+    if (idCategoria) {
+        parametros.set('id_categoria', idCategoria);
+    }
+
+    if (proveedorActivo) {
+        parametros.set('id_proveedor', proveedorActivo);
+    }
+
+    const url = parametros.toString()
+        ? `${ENDPOINTS.catalogo}?${parametros.toString()}`
         : ENDPOINTS.catalogo;
 
     const { ok, data } = await peticionApi(url, { method: 'GET' });
@@ -316,6 +329,50 @@ async function cargarCatalogoPorCategoria(idCategoria) {
     }
 
     renderizarCatalogo(data.productos || []);
+}
+
+/**
+ * Llena el selector de proveedores con los proveedores activos que
+ * tienen productos disponibles (se derivan del catálogo, igual que las
+ * categorías). Si ninguno tiene proveedor, el selector queda oculto.
+ */
+function renderizarFiltroProveedores(productos) {
+    const grupo = document.getElementById('grupoFiltroProveedor');
+    const select = document.getElementById('filtroProveedor');
+
+    if (!grupo || !select) {
+        return;
+    }
+
+    const proveedores = new Map();
+
+    productos.forEach((producto) => {
+        if (producto.id_proveedor !== null && producto.id_proveedor !== undefined) {
+            proveedores.set(producto.id_proveedor, producto.nombre_proveedor);
+        }
+    });
+
+    const ordenados = [...proveedores.entries()].sort((a, b) => a[1].localeCompare(b[1], 'es'));
+
+    select.innerHTML = '<option value="">Todos los proveedores</option>' + ordenados.map(
+        ([id, nombre]) => `<option value="${id}">${escaparHtml(nombre)}</option>`
+    ).join('');
+
+    select.value = proveedorActivo;
+    grupo.classList.toggle('d-none', ordenados.length === 0);
+}
+
+function inicializarFiltroProveedor() {
+    const select = document.getElementById('filtroProveedor');
+
+    if (!select) {
+        return;
+    }
+
+    select.addEventListener('change', () => {
+        proveedorActivo = select.value;
+        cargarCatalogoPorCategoria(categoriaActiva);
+    });
 }
 
 function mostrarErrorCatalogo(mensaje) {
@@ -1723,6 +1780,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     inicializarFiltrosCategorias();
+    inicializarFiltroProveedor();
     inicializarDropdownCategorias();
     inicializarBuscador();
     inicializarNavegacionADetalle();

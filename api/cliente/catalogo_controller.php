@@ -34,9 +34,12 @@ try {
             p.stock, 
             p.imagen, 
             p.id_categoria, 
-            c.nombre_categoria
+            c.nombre_categoria,
+            pr.id_proveedor,
+            pr.nombre_empresa AS nombre_proveedor
         FROM productos p
         LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
+        LEFT JOIN proveedores pr ON p.id_proveedor = pr.id_proveedor AND pr.estado = 1
         WHERE p.estado = 1 AND p.stock > 0
     ";
 
@@ -57,6 +60,23 @@ try {
         
         $sql .= " AND p.id_categoria = :id_categoria";
         $parametros[':id_categoria'] = $idCategoria;
+    }
+
+    // Filtrado por proveedor activo (?id_proveedor=). Se puede combinar con categoría y texto.
+    if (isset($_GET['id_proveedor']) && $_GET['id_proveedor'] !== '') {
+        $idProveedor = filter_input(INPUT_GET, 'id_proveedor', FILTER_VALIDATE_INT);
+
+        if ($idProveedor === false || $idProveedor === null || $idProveedor <= 0) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => 'El id del proveedor no es válido.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $sql .= " AND pr.id_proveedor = :id_proveedor";
+        $parametros[':id_proveedor'] = $idProveedor;
     }
 
     // Búsqueda por texto (?q=): nombre, descripción o categoría.
@@ -102,15 +122,17 @@ try {
             'stock' => (int) $row['stock'],
             'imagen' => $row['imagen'],
             'id_categoria' => $row['id_categoria'] !== null ? (int) $row['id_categoria'] : null,
-            'nombre_categoria' => $row['nombre_categoria']
+            'nombre_categoria' => $row['nombre_categoria'],
+            'id_proveedor' => $row['id_proveedor'] !== null ? (int) $row['id_proveedor'] : null,
+            'nombre_proveedor' => $row['nombre_proveedor']
         ];
     }
 
-    if (count($productosFormateados) === 0 && isset($_GET['id_categoria'])) {
+    if (count($productosFormateados) === 0 && (isset($_GET['id_categoria']) || isset($_GET['id_proveedor']))) {
         http_response_code(200);
         echo json_encode([
             'success' => true,
-            'message' => 'No hay productos disponibles en esta categoría.',
+            'message' => 'No hay productos disponibles con ese filtro.',
             'total' => 0,
             'productos' => []
         ], JSON_UNESCAPED_UNICODE);

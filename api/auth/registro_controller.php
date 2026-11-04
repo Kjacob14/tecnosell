@@ -45,6 +45,13 @@ function requisitosFaltantes(string $password): array
     return $faltantes;
 }
 
+session_set_cookie_params([
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+
+session_start();
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Método no permitido. Use POST.']);
@@ -139,11 +146,26 @@ try {
         ':password' => $passwordHash
     ]);
 
+    $idNuevo = (int) $pdo->lastInsertId();
+
+    // Inicia la sesión de inmediato (mismos datos que guarda login_controller.php),
+    // para que la persona entre a la tienda sin volver a escribir sus datos.
+    session_regenerate_id(true);
+    $_SESSION['id_usuario'] = $idNuevo;
+    $_SESSION['nombre'] = $nombre;
+    $_SESSION['email'] = $email;
+    $_SESSION['rol'] = 'cliente';
+
     http_response_code(200);
     echo json_encode([
-        'success' => true, 
-        'message' => 'Cuenta creada correctamente.'
-    ]);
+        'success' => true,
+        'message' => 'Cuenta creada correctamente.',
+        'usuario' => [
+            'id_usuario' => $idNuevo,
+            'nombre' => $nombre,
+            'rol' => 'cliente'
+        ]
+    ], JSON_UNESCAPED_UNICODE);
 
 } catch (PDOException $e) {
     error_log('Error PDO en registro: ' . $e->getMessage());
