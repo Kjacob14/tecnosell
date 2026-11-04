@@ -113,11 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        mostrarAlerta(alertaRegistro, '¡Cuenta creada con éxito! Redirigiendo...', 'success');
+        mostrarAlerta(alertaRegistro, '¡Cuenta creada! Entrando a la tienda...', 'success');
         
-        // Redirigir al login después de 2 segundos
+        // El servidor ya inició la sesión: se va directo a la tienda.
         setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 2000);
+            window.location.href = 'index.html';
+        }, 1200);
     });
 });
