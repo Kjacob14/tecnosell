@@ -750,19 +750,71 @@ function mostrarVistaProducto(resto) {
         return;
     }
 
+    const imagenesGaleria = Array.isArray(producto.imagenes) && producto.imagenes.length > 0
+        ? producto.imagenes
+        : (producto.imagen ? [producto.imagen] : []);
+    const totalFotos = imagenesGaleria.length;
+
+    let htmlGaleria = '';
+
+    if (totalFotos === 0) {
+        htmlGaleria = `
+            <div class="galeria">
+                <div class="galeria__visor">
+                    <img
+                        src="uploads/sin_imagen.jpg"
+                        alt="${escaparHtml(producto.nombre)}"
+                    >
+                </div>
+            </div>
+        `;
+    } else if (totalFotos === 1) {
+        htmlGaleria = `
+            <div class="galeria">
+                <div class="galeria__visor">
+                    <img
+                        src="uploads/${escaparHtml(imagenesGaleria[0])}"
+                        alt="${escaparHtml(producto.nombre)}"
+                        id="galeriaVisorImg"
+                    >
+                </div>
+            </div>
+        `;
+    } else {
+        const miniaturas = imagenesGaleria.map((nombreArchivo, indice) => `
+            <button
+                type="button"
+                class="galeria-miniatura ${indice === 0 ? 'galeria-miniatura--activa' : ''}"
+                data-imagen="uploads/${escaparHtml(nombreArchivo)}"
+                aria-label="Ver foto ${indice + 1} de ${totalFotos}"
+            >
+                <img
+                    src="uploads/${escaparHtml(nombreArchivo)}"
+                    alt="${escaparHtml(producto.nombre)}"
+                >
+            </button>
+        `).join('');
+
+        htmlGaleria = `
+            <div class="galeria">
+                <div class="galeria__miniaturas">
+                    ${miniaturas}
+                </div>
+                <div class="galeria__visor">
+                    <img
+                        src="uploads/${escaparHtml(imagenesGaleria[0])}"
+                        alt="${escaparHtml(producto.nombre)}"
+                        id="galeriaVisorImg"
+                    >
+                </div>
+            </div>
+        `;
+    }
+
     contenedor.innerHTML = `
         <div class="row g-5">
             <div class="col-lg-6">
-                ${producto.imagen
-                    ? `<img
-                        src="uploads/${escaparHtml(producto.imagen)}"
-                        class="img-fluid rounded-4"
-                        alt="${escaparHtml(producto.nombre)}"
-                    >`
-                    : `<div class="producto-card__imagen d-flex align-items-center justify-content-center" style="height:320px;">
-                        <span class="producto-card__stock">Sin imagen</span>
-                    </div>`
-                }
+                ${htmlGaleria}
             </div>
             <div class="col-lg-6">
                 <p class="producto-card__categoria mb-2">
@@ -806,6 +858,28 @@ function inicializarRouter() {
     document.getElementById('btnVolverCatalogo').addEventListener('click', () => {
         router.navegar('catalogo');
     });
+
+    const contenedorDetalle = document.getElementById('vista-producto__contenido');
+    if (contenedorDetalle) {
+        contenedorDetalle.addEventListener('click', (evento) => {
+            const miniatura = evento.target.closest('.galeria-miniatura');
+
+            if (!miniatura) {
+                return;
+            }
+
+            const visorImg = document.getElementById('galeriaVisorImg');
+            if (visorImg && miniatura.dataset.imagen) {
+                visorImg.removeAttribute('data-respaldo-aplicado');
+                visorImg.classList.remove('imagen-respaldo');
+                visorImg.src = miniatura.dataset.imagen;
+            }
+
+            contenedorDetalle.querySelectorAll('.galeria-miniatura').forEach((boton) => {
+                boton.classList.toggle('galeria-miniatura--activa', boton === miniatura);
+            });
+        });
+    }
 }
 
 /**
