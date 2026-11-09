@@ -51,6 +51,7 @@ const ENDPOINTS = {
     carrito: `${API_BASE}/cliente/carrito_controller.php`,
     checkout: `${API_BASE}/cliente/checkout_controller.php`,
     pedidos: `${API_BASE}/cliente/pedidos_controller.php`,
+    direcciones: `${API_BASE}/cliente/direcciones_controller.php`,
     logout: `${API_BASE}/auth/logout_controller.php`
 };
 
@@ -1195,6 +1196,17 @@ async function cargarPedidos() {
     renderizarPedidos(data.pedidos || []);
 }
 
+/**
+ * Texto de una sola línea con la dirección de entrega. Sin escapar:
+ * quien lo inserte en HTML debe pasarlo por escaparHtml().
+ */
+function textoDireccion(direccion) {
+    const numeroInterior = direccion.num_interior ? `, int. ${direccion.num_interior}` : '';
+
+    return `${direccion.alias}: ${direccion.calle} ${direccion.num_exterior}${numeroInterior}, `
+        + `${direccion.colonia}, ${direccion.ciudad}, ${direccion.estado}, C.P. ${direccion.codigo_postal}`;
+}
+
 function renderizarPedidos(pedidos) {
     const contenedor = document.getElementById('listaPedidos');
 
@@ -1229,9 +1241,16 @@ function renderizarPedidos(pedidos) {
                     <span class="estado-pedido estado-pedido--${escaparHtml(pedido.estado_pedido)}">
                         ${escaparHtml(etiquetaEstadoPedido(pedido.estado_pedido))}
                     </span>
-                    <p class="pedido-card__total">${formatearMoneda(pedido.total)}</p>
+                    ${pedido.subtotal !== null ? `
+                        <p class="pedido-card__meta mb-0">Subtotal: ${formatearMoneda(pedido.subtotal)}</p>
+                        <p class="pedido-card__meta mb-0">IVA (16%): ${formatearMoneda(pedido.iva)}</p>
+                    ` : ''}
+                    <p class="pedido-card__total">${pedido.subtotal !== null ? 'Total: ' : ''}${formatearMoneda(pedido.total)}</p>
                 </div>
             </div>
+            ${pedido.direccion ? `
+                <p class="pedido-card__meta">Entrega en: ${escaparHtml(textoDireccion(pedido.direccion))}</p>
+            ` : ''}
 
             <button
                 type="button"
@@ -1326,7 +1345,7 @@ function inicializarPedidos() {
 /**
  * Ejecuta el proceso de compra. checkout_controller.php extrae
  * los artículos directamente de la tabla carrito según la sesión
- * del servidor, así que la petición va sin cuerpo.
+ * del servidor; la petición solo manda el id_direccion elegido.
  *
  * Maneja tres desenlaces distintos:
  * - 200: compra exitosa, se muestra confirmación con id_pedido.
@@ -1341,7 +1360,9 @@ async function procesarCheckout(btnPagar, spinner) {
     spinner.classList.remove('d-none');
 
     const { ok, status, data } = await peticionApi(ENDPOINTS.checkout, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ id_direccion: Number(direccionElegidaId) })
     });
 
     btnPagar.disabled = false;
@@ -1371,7 +1392,9 @@ function mostrarResultadoCheckoutExito(pedido) {
     document.getElementById('cuerpoModalCheckout').innerHTML = `
         <div class="text-center">
             <p class="fs-5 mb-1">Pedido #${pedido.id_pedido} confirmado</p>
-            <p class="text-muted mb-0">Total: ${formatearMoneda(pedido.total)}</p>
+            <p class="text-muted mb-0">Subtotal: ${formatearMoneda(pedido.subtotal)}</p>
+            <p class="text-muted mb-0">IVA (16%): ${formatearMoneda(pedido.iva)}</p>
+            <p class="mb-0">Total: ${formatearMoneda(pedido.total)}</p>
             <p class="text-muted small">Estado: ${escaparHtml(pedido.estado_pedido)}</p>
         </div>
     `;
@@ -1478,6 +1501,7 @@ const METODOS_PAGO = {
 
 const ETAPAS_PAGO = [
     { titulo: 'Revisa tu pedido', siguiente: 'Continuar' },
+    { titulo: 'Elige dónde entregar', siguiente: 'Continuar' },
     { titulo: 'Elige cómo pagar', siguiente: 'Continuar' },
     { titulo: 'Confirma tu compra', siguiente: 'Confirmar y pagar' }
 ];
@@ -1485,6 +1509,121 @@ const ETAPAS_PAGO = [
 let etapaPago = 1;
 let metodoPagoElegido = '';
 let modalPago = null;
+
+// Direcciones de entrega del cliente (se cargan al abrir el asistente).
+const TASA_IVA = 0.16;
+let direccionesPago = [];
+let direccionElegidaId = '';
+let formularioDireccionAbierto = false;
+
+/**
+ * Calcula el desglose solo para mostrarlo: el servidor es quien decide
+ * los montos reales.
+ */
+function calcularDesgloseIva(subtotal) {
+    const base = Math.round(Number(subtotal || 0) * 100) / 100;
+    const iva = Math.round(base * TASA_IVA * 100) / 100;
+
+    return { subtotal: base, iva, total: Math.round((base + iva) * 100) / 100 };
+}
+
+async function cargarDireccionesPago() {
+    const { ok, data } = await peticionApi(ENDPOINTS.direcciones, { method: 'GET' }, true);
+
+    if (!ok) {
+        direccionesPago = [];
+        mostrarAlertaGlobal(data.message || 'No fue posible cargar tus direcciones.', 'warning');
+        return;
+    }
+
+    direccionesPago = data.direcciones || [];
+}
+
+function formularioDireccionHtml() {
+    const campo = (id, etiqueta, maximo, obligatorio, columnas = 'col-12 col-sm-6', extra = '') => `
+        <div class="${columnas}">
+            <label for="${id}" class="form-label small mb-1">${etiqueta}</label>
+            <input type="text" class="form-control form-control-sm" id="${id}" maxlength="${maximo}" ${obligatorio ? 'required' : ''} ${extra}>
+        </div>
+    `;
+
+    return `
+        <form id="formDireccion" class="direccion-form ${formularioDireccionAbierto ? '' : 'd-none'}" novalidate>
+            <div class="row g-2">
+                ${campo('direccionAlias', 'Alias (ej. Casa)', 50, true)}
+                ${campo('direccionDestinatario', 'Destinatario', 100, true)}
+                ${campo('direccionTelefono', 'Teléfono', 20, true, 'col-12 col-sm-6', 'inputmode="tel"')}
+                ${campo('direccionCalle', 'Calle', 150, true)}
+                ${campo('direccionNumExterior', 'Núm. exterior', 20, true)}
+                ${campo('direccionNumInterior', 'Núm. interior (opcional)', 20, false)}
+                ${campo('direccionColonia', 'Colonia', 100, true)}
+                ${campo('direccionCiudad', 'Ciudad', 100, true)}
+                ${campo('direccionEstado', 'Estado', 100, true)}
+                ${campo('direccionCodigoPostal', 'Código postal', 5, true, 'col-12 col-sm-6', 'inputmode="numeric" pattern="[0-9]{5}"')}
+                ${campo('direccionReferencias', 'Referencias (opcional)', 255, false, 'col-12')}
+            </div>
+            <div id="direccionError" class="text-danger small mt-2 d-none" role="alert"></div>
+            <button type="submit" class="btn-base btn-base--primario btn-base--pequeno mt-3" id="btnGuardarDireccion">
+                Guardar dirección
+            </button>
+        </form>
+    `;
+}
+
+async function guardarDireccionNueva() {
+    const formulario = document.getElementById('formDireccion');
+    const error = document.getElementById('direccionError');
+    const boton = document.getElementById('btnGuardarDireccion');
+
+    error.classList.add('d-none');
+
+    const valor = (id) => document.getElementById(id).value.trim();
+    const opcional = (id) => (valor(id) === '' ? null : valor(id));
+
+    if (!formulario.reportValidity()) {
+        return;
+    }
+
+    if (!/^[0-9+()\-\s]{7,20}$/.test(valor('direccionTelefono'))) {
+        error.textContent = 'El teléfono solo puede tener números, espacios, guiones, paréntesis y +, con al menos 7 caracteres.';
+        error.classList.remove('d-none');
+        return;
+    }
+
+    boton.disabled = true;
+
+    const { ok, data } = await peticionApi(ENDPOINTS.direcciones, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({
+            alias: valor('direccionAlias'),
+            destinatario: valor('direccionDestinatario'),
+            telefono: valor('direccionTelefono'),
+            calle: valor('direccionCalle'),
+            num_exterior: valor('direccionNumExterior'),
+            num_interior: opcional('direccionNumInterior'),
+            colonia: valor('direccionColonia'),
+            ciudad: valor('direccionCiudad'),
+            estado: valor('direccionEstado'),
+            codigo_postal: valor('direccionCodigoPostal'),
+            referencias: opcional('direccionReferencias')
+        })
+    });
+
+    boton.disabled = false;
+
+    if (!ok) {
+        error.textContent = data.message || 'No fue posible guardar la dirección.';
+        error.classList.remove('d-none');
+        return;
+    }
+
+    // Se recarga la lista desde el servidor y la nueva queda seleccionada.
+    await cargarDireccionesPago();
+    direccionElegidaId = String(data.direccion.id_direccion);
+    formularioDireccionAbierto = false;
+    mostrarEtapaPago(2);
+}
 
 function etapaPagoHtml(etapa) {
     const items = ultimoCarrito.carrito || [];
@@ -1508,6 +1647,37 @@ function etapaPagoHtml(etapa) {
     }
 
     if (etapa === 2) {
+        const opcionesDireccion = direccionesPago.map((direccion) => `
+            <label class="pago-metodo">
+                <input
+                    type="radio"
+                    class="form-check-input mt-1"
+                    name="direccionElegida"
+                    value="${direccion.id_direccion}"
+                    ${direccionElegidaId === String(direccion.id_direccion) ? 'checked' : ''}
+                >
+                <span>
+                    <strong class="d-block">${escaparHtml(direccion.alias)}</strong>
+                    <span class="text-muted small">${escaparHtml(textoDireccion(direccion))}</span>
+                </span>
+            </label>
+        `).join('');
+
+        // Sin direcciones guardadas, el formulario aparece abierto.
+        if (direccionesPago.length === 0) {
+            formularioDireccionAbierto = true;
+        }
+
+        return `
+            <h6 class="mb-3" tabindex="-1" id="pagoTituloEtapa">${ETAPAS_PAGO[1].titulo}</h6>
+            ${opcionesDireccion}
+            <button type="button" class="btn-base btn-base--pequeno" id="btnNuevaDireccion">+ Nueva dirección</button>
+            ${formularioDireccionHtml()}
+            <div id="pagoErrorEtapa" class="text-danger small mt-2 d-none" role="alert"></div>
+        `;
+    }
+
+    if (etapa === 3) {
         const opciones = Object.entries(METODOS_PAGO).map(([clave, metodo]) => `
             <label class="pago-metodo">
                 <input
@@ -1525,25 +1695,40 @@ function etapaPagoHtml(etapa) {
         `).join('');
 
         return `
-            <h6 class="mb-3" tabindex="-1" id="pagoTituloEtapa">${ETAPAS_PAGO[1].titulo}</h6>
+            <h6 class="mb-3" tabindex="-1" id="pagoTituloEtapa">${ETAPAS_PAGO[2].titulo}</h6>
             ${opciones}
             <div id="pagoErrorEtapa" class="text-danger small mt-2 d-none" role="alert"></div>
         `;
     }
 
+    const desglose = calcularDesgloseIva(ultimoCarrito.subtotal);
+    const direccionConfirmada = direccionesPago.find((direccion) => String(direccion.id_direccion) === direccionElegidaId);
+
     return `
-        <h6 class="mb-3" tabindex="-1" id="pagoTituloEtapa">${ETAPAS_PAGO[2].titulo}</h6>
+        <h6 class="mb-3" tabindex="-1" id="pagoTituloEtapa">${ETAPAS_PAGO[3].titulo}</h6>
         <div class="pago-resumen__fila">
             <span class="text-muted">Artículos</span>
             <span>${ultimoCarrito.total_articulos}</span>
         </div>
         <div class="pago-resumen__fila">
+            <span class="text-muted">Dirección de entrega</span>
+            <span>${direccionConfirmada ? escaparHtml(textoDireccion(direccionConfirmada)) : ''}</span>
+        </div>
+        <div class="pago-resumen__fila">
             <span class="text-muted">Método de pago</span>
             <span>${METODOS_PAGO[metodoPagoElegido].nombre}</span>
         </div>
-        <div class="d-flex justify-content-between mt-3">
+        <div class="pago-resumen__fila">
+            <span class="text-muted">Subtotal</span>
+            <span>${formatearMoneda(desglose.subtotal)}</span>
+        </div>
+        <div class="pago-resumen__fila">
+            <span class="text-muted">IVA (16%)</span>
+            <span>${formatearMoneda(desglose.iva)}</span>
+        </div>
+        <div class="pago-resumen__fila">
             <strong>Total a pagar</strong>
-            <strong>${formatearMoneda(ultimoCarrito.subtotal || 0)}</strong>
+            <strong>${formatearMoneda(desglose.total)}</strong>
         </div>
         <p class="text-muted small mt-3 mb-0">
             Al confirmar, tu pedido queda registrado como pendiente y se descuenta el inventario.
@@ -1583,7 +1768,7 @@ function mostrarEtapaPago(etapa) {
     }
 }
 
-function abrirAsistentePago() {
+async function abrirAsistentePago() {
     const items = ultimoCarrito.carrito || [];
 
     if (items.length === 0) {
@@ -1597,6 +1782,10 @@ function abrirAsistentePago() {
     }
 
     metodoPagoElegido = '';
+    direccionElegidaId = '';
+    formularioDireccionAbierto = false;
+
+    await cargarDireccionesPago();
 
     const offcanvasCarrito = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasCarrito'));
     if (offcanvasCarrito) {
@@ -1623,6 +1812,19 @@ function cerrarAsistentePago() {
 
 async function avanzarEtapaPago() {
     if (etapaPago === 2) {
+        const direccionSeleccionada = document.querySelector('input[name="direccionElegida"]:checked');
+
+        if (!direccionSeleccionada) {
+            const error = document.getElementById('pagoErrorEtapa');
+            error.textContent = 'Elige o agrega una dirección para continuar.';
+            error.classList.remove('d-none');
+            return;
+        }
+
+        direccionElegidaId = direccionSeleccionada.value;
+    }
+
+    if (etapaPago === 3) {
         const elegido = document.querySelector('input[name="metodoPago"]:checked');
 
         if (!elegido) {
@@ -1653,6 +1855,28 @@ async function avanzarEtapaPago() {
 function inicializarCheckout() {
     document.getElementById('btnIrPagar').addEventListener('click', abrirAsistentePago);
     document.getElementById('btnPagoSiguiente').addEventListener('click', avanzarEtapaPago);
+
+    const contenidoPago = document.getElementById('pagoContenido');
+
+    contenidoPago.addEventListener('click', (evento) => {
+        if (evento.target.closest('#btnNuevaDireccion')) {
+            document.getElementById('formDireccion').classList.toggle('d-none');
+            formularioDireccionAbierto = !document.getElementById('formDireccion').classList.contains('d-none');
+        }
+    });
+
+    contenidoPago.addEventListener('change', (evento) => {
+        if (evento.target.name === 'direccionElegida') {
+            direccionElegidaId = evento.target.value;
+        }
+    });
+
+    contenidoPago.addEventListener('submit', (evento) => {
+        if (evento.target.id === 'formDireccion') {
+            evento.preventDefault();
+            guardarDireccionNueva();
+        }
+    });
 
     document.getElementById('btnPagoAtras').addEventListener('click', () => {
         if (etapaPago > 1) {

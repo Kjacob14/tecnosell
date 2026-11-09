@@ -1364,3 +1364,24 @@ img.imagen-respaldo {
     font-size: 0.85rem;
     white-space: nowrap;
 }
+
+
+/* --- Bloque: direccion-form (formulario de dirección de entrega) --- */
+
+.direccion-form {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--borde-suave);
+    border-radius: var(--radio-lg);
+    background-color: var(--superficie-hover);
+}
+
+.direccion-form .form-control {
+    min-width: 0;
+}
+
+@media (max-width: 400px) {
+    .direccion-form {
+        padding: 0.75rem;
+    }
+}

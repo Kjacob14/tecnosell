@@ -15,6 +15,27 @@ require_once __DIR__ . '/../config/conexion.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+/**
+ * Datos de la dirección de entrega de un pedido, o null si el pedido no
+ * tiene dirección (anterior a SC-02 o dirección ya eliminada).
+ */
+function formatearDireccionPedido(array $fila): ?array
+{
+    if ($fila['id_direccion'] === null || $fila['dir_alias'] === null) {
+        return null;
+    }
+
+    return [
+        'alias' => $fila['dir_alias'],
+        'calle' => $fila['dir_calle'],
+        'num_exterior' => $fila['dir_num_exterior'],
+        'colonia' => $fila['dir_colonia'],
+        'ciudad' => $fila['dir_ciudad'],
+        'estado' => $fila['dir_estado'],
+        'codigo_postal' => $fila['dir_codigo_postal']
+    ];
+}
+
 session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
 session_start();
 
@@ -58,9 +79,13 @@ try {
         }
 
         $stmt = $pdo->prepare("
-            SELECT id_pedido, total, estado_pedido, fecha_pedido
-            FROM pedidos
-            WHERE id_pedido = :id_pedido AND id_usuario = :id_usuario
+            SELECT p.id_pedido, p.total, p.subtotal, p.iva, p.estado_pedido, p.fecha_pedido, p.id_direccion,
+                   de.alias AS dir_alias, de.calle AS dir_calle, de.num_exterior AS dir_num_exterior,
+                   de.colonia AS dir_colonia, de.ciudad AS dir_ciudad, de.estado AS dir_estado,
+                   de.codigo_postal AS dir_codigo_postal
+            FROM pedidos p
+            LEFT JOIN direcciones_entrega de ON p.id_direccion = de.id_direccion
+            WHERE p.id_pedido = :id_pedido AND p.id_usuario = :id_usuario
         ");
         $stmt->execute([
             ':id_pedido' => $idPedido,
@@ -116,9 +141,12 @@ try {
             'message' => 'Pedido obtenido correctamente.',
             'pedido' => [
                 'id_pedido' => (int) $pedido['id_pedido'],
+                'subtotal' => $pedido['subtotal'] !== null ? number_format((float) $pedido['subtotal'], 2, '.', '') : null,
+                'iva' => $pedido['iva'] !== null ? number_format((float) $pedido['iva'], 2, '.', '') : null,
                 'total' => number_format((float) $pedido['total'], 2, '.', ''),
                 'estado_pedido' => $pedido['estado_pedido'],
                 'fecha_pedido' => $pedido['fecha_pedido'],
+                'direccion' => formatearDireccionPedido($pedido),
                 'detalles' => $detalles
             ]
         ], JSON_UNESCAPED_UNICODE);
@@ -132,14 +160,25 @@ try {
         SELECT
             p.id_pedido,
             p.total,
+            p.subtotal,
+            p.iva,
             p.estado_pedido,
             p.fecha_pedido,
+            p.id_direccion,
+            de.alias AS dir_alias,
+            de.calle AS dir_calle,
+            de.num_exterior AS dir_num_exterior,
+            de.colonia AS dir_colonia,
+            de.ciudad AS dir_ciudad,
+            de.estado AS dir_estado,
+            de.codigo_postal AS dir_codigo_postal,
             (
                 SELECT COALESCE(SUM(d.cantidad), 0)
                 FROM detalles_pedido d
                 WHERE d.id_pedido = p.id_pedido
             ) AS total_articulos
         FROM pedidos p
+        LEFT JOIN direcciones_entrega de ON p.id_direccion = de.id_direccion
         WHERE p.id_usuario = :id_usuario
         ORDER BY p.fecha_pedido DESC, p.id_pedido DESC
     ");
@@ -150,9 +189,12 @@ try {
     foreach ($stmt->fetchAll() as $fila) {
         $pedidos[] = [
             'id_pedido' => (int) $fila['id_pedido'],
+            'subtotal' => $fila['subtotal'] !== null ? number_format((float) $fila['subtotal'], 2, '.', '') : null,
+            'iva' => $fila['iva'] !== null ? number_format((float) $fila['iva'], 2, '.', '') : null,
             'total' => number_format((float) $fila['total'], 2, '.', ''),
             'estado_pedido' => $fila['estado_pedido'],
             'fecha_pedido' => $fila['fecha_pedido'],
+            'direccion' => formatearDireccionPedido($fila),
             'total_articulos' => (int) $fila['total_articulos']
         ];
     }
