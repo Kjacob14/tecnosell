@@ -8,6 +8,9 @@
 
 require_once __DIR__ . '/../config/conexion.php';
 
+// Los precios de la tienda son antes de IVA: el IVA se suma encima.
+const TASA_IVA = 0.16;
+
 header('Content-Type: application/json; charset=utf-8');
 session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
 session_start();
@@ -28,6 +31,30 @@ $idUsuario = (int) $_SESSION['id_usuario'];
 
 try {
     $pdo = Conexion::obtenerConexion();
+
+    // Leer el JSON de entrada y exigir una dirección de entrega que pertenezca
+    // al usuario en sesión. Se verifica antes de abrir la transacción.
+    $entrada = json_decode((string) file_get_contents('php://input'), true);
+    $idDireccion = is_array($entrada)
+        ? filter_var($entrada['id_direccion'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])
+        : false;
+
+    $direccionValida = false;
+
+    if ($idDireccion !== false) {
+        $stmtDireccion = $pdo->prepare('SELECT id_direccion FROM direcciones_entrega WHERE id_direccion = :id_direccion AND id_usuario = :id_usuario');
+        $stmtDireccion->execute([
+            ':id_direccion' => $idDireccion,
+            ':id_usuario' => $idUsuario
+        ]);
+        $direccionValida = (bool) $stmtDireccion->fetch();
+    }
+
+    if (!$direccionValida) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Selecciona una dirección de entrega válida.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     
     // Iniciar transacción SQL para garantizar integridad (BEGIN)
     $pdo->beginTransaction();
@@ -91,11 +118,19 @@ try {
         exit;
     }
 
+    // El servidor calcula los montos; nunca se confía en lo que mande el navegador.
+    $subtotal = round($totalPedido, 2);
+    $iva = round($subtotal * TASA_IVA, 2);
+    $totalPedido = round($subtotal + $iva, 2);
+
     // 4. Registrar la orden matriz (Pedidos)
-    $sqlPedido = "INSERT INTO pedidos (id_usuario, total, estado_pedido) VALUES (:id_usuario, :total, 'pendiente')";
+    $sqlPedido = "INSERT INTO pedidos (id_usuario, id_direccion, subtotal, iva, total, estado_pedido) VALUES (:id_usuario, :id_direccion, :subtotal, :iva, :total, 'pendiente')";
     $stmtPedido = $pdo->prepare($sqlPedido);
     $stmtPedido->execute([
         ':id_usuario' => $idUsuario,
+        ':id_direccion' => $idDireccion,
+        ':subtotal' => $subtotal,
+        ':iva' => $iva,
         ':total' => $totalPedido
     ]);
     
@@ -137,6 +172,8 @@ try {
         'message' => 'Compra realizada correctamente.',
         'pedido' => [
             'id_pedido' => $idPedido,
+            'subtotal' => number_format($subtotal, 2, '.', ''),
+            'iva' => number_format($iva, 2, '.', ''),
             'total' => number_format($totalPedido, 2, '.', ''),
             'estado_pedido' => 'pendiente'
         ]
