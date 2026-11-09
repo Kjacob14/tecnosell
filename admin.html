@@ -86,6 +86,18 @@
             <li class="nav-item" role="presentation">
                 <button
                     class="nav-link active"
+                    id="tab-dashboard-btn"
+                    data-bs-toggle="tab"
+                    data-bs-target="#tab-dashboard"
+                    type="button"
+                    role="tab"
+                >
+                    Dashboard
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button
+                    class="nav-link"
                     id="tab-productos-btn"
                     data-bs-toggle="tab"
                     data-bs-target="#tab-productos"
@@ -136,9 +148,60 @@
         <div class="tab-content" id="tabsAdminContent">
 
             <!-- ========================================================
+                 TAB: DASHBOARD
+                 ======================================================== -->
+            <div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 m-0">Dashboard de ventas</h2>
+                    <select id="dashboardPeriodo" class="form-select form-select-sm w-auto" aria-label="Periodo del dashboard">
+                        <option value="7">Últimos 7 días</option>
+                        <option value="30" selected>Últimos 30 días</option>
+                        <option value="90">Últimos 90 días</option>
+                        <option value="todo">Todo</option>
+                    </select>
+                </div>
+
+                <div id="dashboardAviso" class="alert alert-warning d-none" role="alert"></div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-lg-3">
+                        <div class="bento-card p-3">
+                            <div class="bento-card__etiqueta">Ingresos</div>
+                            <div class="bento-card__titulo h4 m-0" id="dashboardIngresos">$0.00</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="bento-card p-3">
+                            <div class="bento-card__etiqueta">Costos</div>
+                            <div class="bento-card__titulo h4 m-0" id="dashboardCostos">$0.00</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="bento-card p-3">
+                            <div class="bento-card__etiqueta">Utilidad neta</div>
+                            <div class="bento-card__titulo h4 m-0" id="dashboardUtilidad">$0.00</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <div class="bento-card p-3">
+                            <div class="bento-card__etiqueta">Pedidos</div>
+                            <div class="bento-card__titulo h4 m-0" id="dashboardPedidos">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-admin p-3">
+                    <h3 class="h6 mb-3">Productos más vendidos</h3>
+                    <div id="dashboardMasVendidos"></div>
+                </div>
+
+            </div>
+
+            <!-- ========================================================
                  TAB: PRODUCTOS
                  ======================================================== -->
-            <div class="tab-pane fade show active" id="tab-productos" role="tabpanel">
+            <div class="tab-pane fade" id="tab-productos" role="tabpanel">
 
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="h5 m-0">Productos</h2>
@@ -342,6 +405,10 @@
                             <div class="col-6 mb-3">
                                 <label for="productoPrecio" class="form-label">Precio</label>
                                 <input type="number" step="0.01" min="0" class="form-control" id="productoPrecio" required>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="productoCosto" class="form-label">Costo de compra</label>
+                                <input type="number" step="0.01" min="0" class="form-control" id="productoCosto" value="0">
                             </div>
                             <div class="col-6 mb-3">
                                 <label for="productoStock" class="form-label">Stock</label>
