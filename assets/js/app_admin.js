@@ -715,6 +715,41 @@ function inicializarFormularioProducto() {
     const spinner = document.getElementById('spinnerProducto');
     const inputImagen = document.getElementById('productoImagen');
     const ayudaImagen = document.getElementById('ayudaImagenProducto');
+    const inputGaleria = document.getElementById('productoGaleria');
+    const contenedorGaleriaActual = document.getElementById('productoGaleriaActual');
+
+    const TIPOS_IMAGEN_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
+    const PESO_MAXIMO_IMAGEN = 5 * 1024 * 1024;
+    const MAX_FOTOS_ADICIONALES = 8;
+
+    function renderizarGaleriaActual(galeria) {
+        if (!contenedorGaleriaActual) {
+            return;
+        }
+
+        if (!Array.isArray(galeria) || galeria.length === 0) {
+            contenedorGaleriaActual.innerHTML = '';
+            return;
+        }
+
+        contenedorGaleriaActual.innerHTML = galeria.map((foto) => `
+            <div class="d-flex flex-column align-items-center gap-1" data-id-imagen="${escaparHtml(String(foto.id_imagen))}">
+                <img
+                    src="uploads/${escaparHtml(foto.ruta_imagen)}"
+                    alt="Foto adicional"
+                    style="width: 64px; height: 64px; object-fit: cover;"
+                    class="rounded border"
+                >
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger py-0 px-2 btn-quitar-foto-galeria"
+                    data-id-imagen="${escaparHtml(String(foto.id_imagen))}"
+                >
+                    Quitar
+                </button>
+            </div>
+        `).join('');
+    }
 
     document.getElementById('btnNuevoProducto').addEventListener('click', () => {
         formProducto.reset();
@@ -723,6 +758,8 @@ function inicializarFormularioProducto() {
         document.getElementById('tituloModalProducto').textContent = 'Nuevo producto';
         inputImagen.disabled = false;
         ayudaImagen.textContent = '';
+        if (inputGaleria) inputGaleria.value = '';
+        if (contenedorGaleriaActual) contenedorGaleriaActual.innerHTML = '';
         ocultarAlerta(alertaFormProducto);
     });
 
@@ -753,6 +790,8 @@ function inicializarFormularioProducto() {
             inputImagen.value = '';
             inputImagen.disabled = false;
             ayudaImagen.textContent = 'Deje este campo vacío para conservar la imagen actual.';
+            if (inputGaleria) inputGaleria.value = '';
+            renderizarGaleriaActual(producto.galeria || []);
 
             ocultarAlerta(alertaFormProducto);
             modalProducto.show();
@@ -805,6 +844,28 @@ function inicializarFormularioProducto() {
             return;
         }
 
+        const archivosGaleria = inputGaleria && inputGaleria.files ? Array.from(inputGaleria.files) : [];
+        const fotosExistentes = contenedorGaleriaActual
+            ? contenedorGaleriaActual.querySelectorAll('[data-id-imagen]').length
+            : 0;
+
+        if (fotosExistentes + archivosGaleria.length > MAX_FOTOS_ADICIONALES) {
+            mostrarAlerta(alertaFormProducto, 'Un producto admite máximo 8 fotos adicionales.');
+            return;
+        }
+
+        for (const archivo of archivosGaleria) {
+            if (!TIPOS_IMAGEN_PERMITIDOS.includes(archivo.type)) {
+                mostrarAlerta(alertaFormProducto, 'Formato de imagen no permitido. Use JPG, PNG o WEBP.');
+                return;
+            }
+
+            if (archivo.size > PESO_MAXIMO_IMAGEN) {
+                mostrarAlerta(alertaFormProducto, 'Cada foto adicional no puede superar los 5 MB.');
+                return;
+            }
+        }
+
         alternarCargaBoton(btnGuardar, spinner, true);
 
         /*
@@ -847,6 +908,10 @@ function inicializarFormularioProducto() {
             formData.append('imagen', inputImagen.files[0]);
         }
 
+        for (const archivo of archivosGaleria) {
+            formData.append('galeria[]', archivo);
+        }
+
         const resultado = await peticionApi(ENDPOINTS.productos, {
             method: 'POST',
             body: formData
@@ -862,8 +927,55 @@ function inicializarFormularioProducto() {
             return;
         }
 
+        if (inputGaleria) {
+            inputGaleria.value = '';
+        }
+
         modalProducto.hide();
         await cargarProductos();
+    });
+
+    if (contenedorGaleriaActual) {
+        contenedorGaleriaActual.addEventListener('click', (evento) => {
+            const botonQuitar = evento.target.closest('.btn-quitar-foto-galeria');
+
+            if (!botonQuitar) {
+                return;
+            }
+
+            const idImagen = botonQuitar.dataset.idImagen;
+
+            solicitarConfirmacion(
+                '¿Quitar esta foto adicional? Esta acción no se puede deshacer.',
+                async () => {
+                    const { ok, data } = await peticionApi(
+                        `${ENDPOINTS.productos}?id_imagen=${encodeURIComponent(idImagen)}`,
+                        { method: 'DELETE' }
+                    );
+
+                    if (!ok) {
+                        mostrarAlerta(
+                            alertaFormProducto,
+                            data.message || 'No fue posible eliminar la foto.'
+                        );
+                        return;
+                    }
+
+                    const miniatura = contenedorGaleriaActual.querySelector(`[data-id-imagen="${CSS.escape(idImagen)}"]`);
+                    if (miniatura) {
+                        miniatura.remove();
+                    }
+
+                    await cargarProductos();
+                }
+            );
+        });
+    }
+
+    modalElemento.addEventListener('hidden.bs.modal', () => {
+        if (inputGaleria) {
+            inputGaleria.value = '';
+        }
     });
 }
 
