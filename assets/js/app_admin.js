@@ -985,8 +985,21 @@ function inicializarPedidos() {
                 <strong>Cliente:</strong> ${escaparHtml(pedido.nombre)}
                 (${escaparHtml(pedido.email)})
             </p>
+            ${pedido.subtotal !== null ? `
+                <p class="mb-1"><strong>Subtotal:</strong> ${formatearMoneda(pedido.subtotal)}</p>
+                <p class="mb-1"><strong>IVA (16%):</strong> ${formatearMoneda(pedido.iva)}</p>
+            ` : ''}
             <p>
                 <strong>Total del pedido:</strong> ${formatearMoneda(pedido.total)}
+            </p>
+            <p>
+                <strong>Dirección de entrega:</strong>
+                ${pedido.direccion
+                    ? `${escaparHtml(pedido.direccion.destinatario)} (${escaparHtml(pedido.direccion.telefono)}),
+                       ${escaparHtml(pedido.direccion.calle)} ${escaparHtml(pedido.direccion.num_exterior)}${pedido.direccion.num_interior ? `, int. ${escaparHtml(pedido.direccion.num_interior)}` : ''},
+                       ${escaparHtml(pedido.direccion.colonia)}, ${escaparHtml(pedido.direccion.ciudad)},
+                       ${escaparHtml(pedido.direccion.estado)}, C.P. ${escaparHtml(pedido.direccion.codigo_postal)}${pedido.direccion.referencias ? ` (Ref.: ${escaparHtml(pedido.direccion.referencias)})` : ''}`
+                    : '—'}
             </p>
             <table class="table table-sm">
                 <thead>
