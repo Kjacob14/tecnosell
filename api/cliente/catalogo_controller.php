@@ -112,7 +112,42 @@ try {
     $productosBD = $stmt->fetchAll();
     $productosFormateados = [];
 
+    // Fotos adicionales de todos los productos devueltos, con UNA sola consulta.
+    $adicionales = [];
+
+    if (count($productosBD) > 0) {
+        $marcadores = [];
+        $parametrosFotos = [];
+
+        foreach ($productosBD as $indice => $row) {
+            $marcadores[] = ':id' . $indice;
+            $parametrosFotos[':id' . $indice] = (int) $row['id_producto'];
+        }
+
+        $stmtFotos = $pdo->prepare("
+            SELECT id_producto, ruta_imagen
+            FROM producto_imagenes
+            WHERE id_producto IN (" . implode(', ', $marcadores) . ")
+            ORDER BY orden ASC, id_imagen ASC
+        ");
+        $stmtFotos->execute($parametrosFotos);
+
+        foreach ($stmtFotos->fetchAll() as $foto) {
+            $adicionales[(int) $foto['id_producto']][] = $foto['ruta_imagen'];
+        }
+    }
+
     foreach ($productosBD as $row) {
+        // Galería: la portada primero (si existe) y luego las adicionales por orden.
+        $imagenes = [];
+
+        if ($row['imagen'] !== null && $row['imagen'] !== '') {
+            $imagenes[] = $row['imagen'];
+        }
+
+        foreach ($adicionales[(int) $row['id_producto']] ?? [] as $rutaAdicional) {
+            $imagenes[] = $rutaAdicional;
+        }
         $productosFormateados[] = [
             'id_producto' => (int) $row['id_producto'],
             'nombre' => $row['nombre'],
@@ -121,6 +156,7 @@ try {
             'precio' => number_format((float) $row['precio'], 2, '.', ''),
             'stock' => (int) $row['stock'],
             'imagen' => $row['imagen'],
+            'imagenes' => $imagenes,
             'id_categoria' => $row['id_categoria'] !== null ? (int) $row['id_categoria'] : null,
             'nombre_categoria' => $row['nombre_categoria'],
             'id_proveedor' => $row['id_proveedor'] !== null ? (int) $row['id_proveedor'] : null,
