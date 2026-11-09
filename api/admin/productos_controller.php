@@ -510,6 +510,127 @@ function eliminarImagen(?string $nombreArchivo): void
 }
 
 
+/**
+ * Máximo de fotos adicionales por producto.
+ */
+const MAX_FOTOS_ADICIONALES = 8;
+
+
+/**
+ * Convierte $_FILES['galeria'] (arreglos paralelos name[], tmp_name[],
+ * error[], size[]) en una lista de archivos individuales con la forma
+ * que espera procesarImagen(). Ignora los que vengan con UPLOAD_ERR_NO_FILE.
+ */
+function reorganizarArchivosGaleria(): array
+{
+    if (!isset($_FILES['galeria']) || !is_array($_FILES['galeria']['error'])) {
+        return [];
+    }
+
+    $archivos = [];
+
+    foreach ($_FILES['galeria']['error'] as $indice => $codigoError) {
+        if ($codigoError === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
+
+        $archivos[] = [
+            'name'     => $_FILES['galeria']['name'][$indice] ?? '',
+            'type'     => $_FILES['galeria']['type'][$indice] ?? '',
+            'tmp_name' => $_FILES['galeria']['tmp_name'][$indice] ?? '',
+            'error'    => $codigoError,
+            'size'     => $_FILES['galeria']['size'][$indice] ?? 0
+        ];
+    }
+
+    return $archivos;
+}
+
+
+/**
+ * Cuenta las fotos adicionales que ya tiene un producto.
+ */
+function contarFotosAdicionales(PDO $pdo, int $idProducto): int
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM producto_imagenes WHERE id_producto = :id_producto');
+    $stmt->execute([':id_producto' => $idProducto]);
+
+    return (int) $stmt->fetchColumn();
+}
+
+
+/**
+ * Inserta las fotos adicionales recién subidas con orden consecutivo
+ * (máximo orden actual + 1). No borra las anteriores.
+ */
+function guardarFotosAdicionales(PDO $pdo, int $idProducto, array $nombresArchivo): void
+{
+    if (count($nombresArchivo) === 0) {
+        return;
+    }
+
+    $stmt = $pdo->prepare('SELECT COALESCE(MAX(orden), 0) FROM producto_imagenes WHERE id_producto = :id_producto');
+    $stmt->execute([':id_producto' => $idProducto]);
+    $orden = (int) $stmt->fetchColumn();
+
+    $stmtInsertar = $pdo->prepare("
+        INSERT INTO producto_imagenes (id_producto, ruta_imagen, orden)
+        VALUES (:id_producto, :ruta_imagen, :orden)
+    ");
+
+    foreach ($nombresArchivo as $nombreArchivo) {
+        $orden++;
+
+        $stmtInsertar->execute([
+            ':id_producto' => $idProducto,
+            ':ruta_imagen' => $nombreArchivo,
+            ':orden'       => $orden
+        ]);
+    }
+}
+
+
+/**
+ * Devuelve la galería de varios productos con UNA sola consulta.
+ *
+ * Resultado: [id_producto => [ {id_imagen, ruta_imagen, orden}, ... ]]
+ */
+function obtenerGaleriaProductos(PDO $pdo, array $idsProducto): array
+{
+    $galerias = [];
+
+    if (count($idsProducto) === 0) {
+        return $galerias;
+    }
+
+    $marcadores = [];
+    $parametros = [];
+
+    foreach (array_values($idsProducto) as $indice => $idProducto) {
+        $marcadores[] = ':id' . $indice;
+        $parametros[':id' . $indice] = (int) $idProducto;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT id_imagen, id_producto, ruta_imagen, orden
+        FROM producto_imagenes
+        WHERE id_producto IN (" . implode(', ', $marcadores) . ")
+        ORDER BY orden ASC, id_imagen ASC
+    ");
+    $stmt->execute($parametros);
+
+    foreach ($stmt->fetchAll() as $fila) {
+        $galerias[(int) $fila['id_producto']][] = [
+            'id_imagen'   => (int) $fila['id_imagen'],
+            'ruta_imagen' => $fila['ruta_imagen'],
+            'orden'       => (int) $fila['orden']
+        ];
+    }
+
+    return $galerias;
+}
+
+
 /* =========================================================
  * CONTROL DE SESIÓN Y AUTORIZACIÓN
  * ========================================================= */
@@ -543,6 +664,7 @@ if (
  * ========================================================= */
 
 $imagenNueva = null;
+$galeriaNueva = [];
 
 try {
 
@@ -618,7 +740,8 @@ try {
                     'costo_compra' => number_format((float) $producto['costo_compra'], 2, '.', ''),
                     'stock' => (int) $producto['stock'],
                     'imagen' => $producto['imagen'],
-                    'estado' => (int) $producto['estado']
+                    'estado' => (int) $producto['estado'],
+                    'galeria' => obtenerGaleriaProductos($pdo, [$idProducto])[$idProducto] ?? []
                 ]
             ]);
         }
@@ -657,6 +780,8 @@ try {
 
         $productos = $stmt->fetchAll();
 
+        $galerias = obtenerGaleriaProductos($pdo, array_column($productos, 'id_producto'));
+
         $resultado = [];
 
         foreach ($productos as $producto) {
@@ -674,7 +799,8 @@ try {
                 'costo_compra' => number_format((float) $producto['costo_compra'], 2, '.', ''),
                 'stock' => (int) $producto['stock'],
                 'imagen' => $producto['imagen'],
-                'estado' => (int) $producto['estado']
+                'estado' => (int) $producto['estado'],
+                'galeria' => $galerias[(int) $producto['id_producto']] ?? []
             ];
         }
 
@@ -714,11 +840,55 @@ try {
         verificarProveedor($pdo, $idProveedor);
 
         /*
+         * Si la petición termina con error, se borran del disco los
+         * archivos recién subidos (portada y fotos adicionales) para
+         * no dejar basura.
+         */
+        register_shutdown_function(function () use (&$imagenNueva, &$galeriaNueva) {
+            if (http_response_code() >= 400) {
+                foreach ($galeriaNueva as $nombreGaleria) {
+                    eliminarImagen($nombreGaleria);
+                }
+
+                eliminarImagen($imagenNueva);
+            }
+        });
+
+        /*
+         * Fotos adicionales: se cuenta lo existente más lo nuevo
+         * antes de procesar cualquier archivo.
+         */
+        $archivosGaleria = reorganizarArchivosGaleria();
+
+        if (count($archivosGaleria) > 0) {
+            $fotosExistentes = $idProducto ? contarFotosAdicionales($pdo, $idProducto) : 0;
+
+            if ($fotosExistentes + count($archivosGaleria) > MAX_FOTOS_ADICIONALES) {
+                responderJSON(400, [
+                    'success' => false,
+                    'message' => 'Un producto admite máximo 8 fotos adicionales.'
+                ]);
+            }
+        }
+
+        /*
          * Procesar imagen solamente después de validar los demás datos.
          */
         if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] !== UPLOAD_ERR_NO_FILE) {
             $imagenNueva = procesarImagen($_FILES['imagen']);
         }
+
+        // Cada foto adicional pasa por procesarImagen() (misma validación que la portada).
+        foreach ($archivosGaleria as $archivoGaleria) {
+            $nombreGaleria = procesarImagen($archivoGaleria);
+
+            if ($nombreGaleria !== null) {
+                $galeriaNueva[] = $nombreGaleria;
+            }
+        }
+
+        // Producto y fotos adicionales se guardan juntos o no se guarda nada.
+        $pdo->beginTransaction();
 
         if ($idProducto) {
             /* -------------------------------------------------
@@ -769,6 +939,9 @@ try {
             $stmt->bindValue(':id_producto', $idProducto, PDO::PARAM_INT);
 
             $stmt->execute();
+
+            guardarFotosAdicionales($pdo, $idProducto, $galeriaNueva);
+            $pdo->commit();
 
             // Limpieza del disco: borrar la imagen anterior si fue reemplazada
             if (isset($imagenNueva) && $productoActual['imagen']) {
@@ -836,6 +1009,9 @@ try {
             $stmt->execute();
 
             $idNuevo = (int) $pdo->lastInsertId();
+
+            guardarFotosAdicionales($pdo, $idNuevo, $galeriaNueva);
+            $pdo->commit();
 
             responderJSON(200, [
                 'success' => true,
@@ -1085,8 +1261,44 @@ try {
 
     if ($metodo === 'DELETE') {
 
-        $idProducto = obtenerIdProducto();
+        /*
+         * DELETE ?id_imagen=N: borra una foto adicional
+         * (?id= sigue siendo para borrar productos).
+         */
+        if (isset($_GET['id_imagen'])) {
+            $idImagen = filter_input(INPUT_GET, 'id_imagen', FILTER_VALIDATE_INT);
 
+            if ($idImagen === false || $idImagen === null || $idImagen <= 0) {
+                responderJSON(400, [
+                    'success' => false,
+                    'message' => 'El id de la foto no es válido.'
+                ]);
+            }
+
+            $stmtImagen = $pdo->prepare('SELECT ruta_imagen FROM producto_imagenes WHERE id_imagen = :id_imagen');
+            $stmtImagen->execute([':id_imagen' => $idImagen]);
+            $imagenAdicional = $stmtImagen->fetch();
+
+            if (!$imagenAdicional) {
+                responderJSON(400, [
+                    'success' => false,
+                    'message' => 'La foto no existe.'
+                ]);
+            }
+
+            eliminarImagen($imagenAdicional['ruta_imagen']);
+
+            $stmtBorrar = $pdo->prepare('DELETE FROM producto_imagenes WHERE id_imagen = :id_imagen');
+            $stmtBorrar->execute([':id_imagen' => $idImagen]);
+
+            responderJSON(200, [
+                'success' => true,
+                'message' => 'Foto eliminada correctamente.',
+                'id_imagen' => $idImagen
+            ]);
+        }
+
+        $idProducto = obtenerIdProducto();
 
         /*
          * Primero obtenemos el producto y su imagen.
@@ -1114,6 +1326,14 @@ try {
                 'message' => 'El producto que intenta eliminar no existe.'
             ]);
         }
+
+        /*
+         * Fotos adicionales del producto: se consultan antes de borrar
+         * (la tabla se limpia sola por ON DELETE CASCADE).
+         */
+        $stmtFotos = $pdo->prepare('SELECT ruta_imagen FROM producto_imagenes WHERE id_producto = :id_producto');
+        $stmtFotos->execute([':id_producto' => $idProducto]);
+        $fotosAdicionales = $stmtFotos->fetchAll(PDO::FETCH_COLUMN);
 
         /*
          * El DELETE físico se mantiene porque el CRUD del
@@ -1161,6 +1381,10 @@ try {
          */
         eliminarImagen($producto['imagen']);
 
+        foreach ($fotosAdicionales as $fotoAdicional) {
+            eliminarImagen($fotoAdicional);
+        }
+
 
         responderJSON(200, [
             'success' => true,
@@ -1187,6 +1411,14 @@ try {
      * la operación SQL, intentamos eliminarla para evitar
      * archivos huérfanos.
      */
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    foreach ($galeriaNueva as $nombreGaleria) {
+        eliminarImagen($nombreGaleria);
+    }
+
     if ($imagenNueva !== null) {
         eliminarImagen($imagenNueva);
     }
@@ -1203,6 +1435,14 @@ try {
 
 
 } catch (Throwable $e) {
+
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    foreach ($galeriaNueva as $nombreGaleria) {
+        eliminarImagen($nombreGaleria);
+    }
 
     if ($imagenNueva !== null) {
         eliminarImagen($imagenNueva);

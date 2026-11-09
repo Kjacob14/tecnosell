@@ -439,9 +439,15 @@
                         </div>
 
                         <div class="mb-3" id="grupoImagenProducto">
-                            <label for="productoImagen" class="form-label">Imagen (JPG, PNG o WEBP, máx. 5 MB)</label>
+                            <label for="productoImagen" class="form-label">Foto de portada</label>
                             <input type="file" class="form-control" id="productoImagen" accept="image/jpeg,image/png,image/webp">
                             <div class="form-text" id="ayudaImagenProducto"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="productoGaleria" class="form-label">Fotos adicionales (hasta 8, máx. 5 MB cada una)</label>
+                            <input type="file" class="form-control" id="productoGaleria" multiple accept="image/jpeg,image/png,image/webp">
+                            <div id="productoGaleriaActual" class="d-flex flex-wrap gap-2 mt-2"></div>
                         </div>
 
                     </div>
