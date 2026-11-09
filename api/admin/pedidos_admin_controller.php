@@ -12,6 +12,45 @@ if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'admin') {
     exit;
 }
 
+/**
+ * Agrupa las columnas dir_* del pedido en un arreglo "direccion" (null si el
+ * pedido no tiene dirección) y da formato a subtotal e iva (null si no hay desglose).
+ */
+function formatearPedidoAdmin(array $pedido): array
+{
+    $direccion = null;
+
+    if ($pedido['id_direccion'] !== null && $pedido['dir_alias'] !== null) {
+        $direccion = [
+            'alias' => $pedido['dir_alias'],
+            'destinatario' => $pedido['dir_destinatario'],
+            'telefono' => $pedido['dir_telefono'],
+            'calle' => $pedido['dir_calle'],
+            'num_exterior' => $pedido['dir_num_exterior'],
+            'num_interior' => $pedido['dir_num_interior'],
+            'colonia' => $pedido['dir_colonia'],
+            'ciudad' => $pedido['dir_ciudad'],
+            'estado' => $pedido['dir_estado'],
+            'codigo_postal' => $pedido['dir_codigo_postal'],
+            'referencias' => $pedido['dir_referencias']
+        ];
+    }
+
+    foreach (array_keys($pedido) as $columna) {
+        if (str_starts_with($columna, 'dir_')) {
+            unset($pedido[$columna]);
+        }
+    }
+
+    unset($pedido['id_direccion']);
+
+    $pedido['subtotal'] = $pedido['subtotal'] !== null ? number_format((float) $pedido['subtotal'], 2, '.', '') : null;
+    $pedido['iva'] = $pedido['iva'] !== null ? number_format((float) $pedido['iva'], 2, '.', '') : null;
+    $pedido['direccion'] = $direccion;
+
+    return $pedido;
+}
+
 require_once __DIR__ . '/../config/conexion.php';
 $conexion = Conexion::obtenerConexion();
 $metodo = $_SERVER['REQUEST_METHOD'];
@@ -25,9 +64,10 @@ try {
                 if (!$id_pedido) throw new Exception("ID de pedido inválido.");
 
                 $stmt = $conexion->prepare("
-                    SELECT p.id_pedido, p.total, p.estado_pedido, p.fecha_pedido, u.nombre, u.email 
+                    SELECT p.id_pedido, p.total, p.estado_pedido, p.fecha_pedido, p.subtotal, p.iva, p.id_direccion, de.alias AS dir_alias, de.destinatario AS dir_destinatario, de.telefono AS dir_telefono, de.calle AS dir_calle, de.num_exterior AS dir_num_exterior, de.num_interior AS dir_num_interior, de.colonia AS dir_colonia, de.ciudad AS dir_ciudad, de.estado AS dir_estado, de.codigo_postal AS dir_codigo_postal, de.referencias AS dir_referencias, u.nombre, u.email 
                     FROM pedidos p 
                     JOIN usuarios u ON p.id_usuario = u.id_usuario 
+                    LEFT JOIN direcciones_entrega de ON p.id_direccion = de.id_direccion 
                     WHERE p.id_pedido = :id
                 ");
                 $stmt->bindParam(':id', $id_pedido, PDO::PARAM_INT);
@@ -50,19 +90,21 @@ try {
                 $stmtDetalles->bindParam(':id', $id_pedido, PDO::PARAM_INT);
                 $stmtDetalles->execute();
                 $pedido['detalles'] = $stmtDetalles->fetchAll(PDO::FETCH_ASSOC);
+                $pedido = formatearPedidoAdmin($pedido);
 
                 http_response_code(200);
                 echo json_encode(['success' => true, 'pedido' => $pedido]);
             } else {
                 // Consultar el listado general de pedidos
                 $stmt = $conexion->prepare("
-                    SELECT p.id_pedido, p.total, p.estado_pedido, p.fecha_pedido, u.nombre 
+                    SELECT p.id_pedido, p.total, p.estado_pedido, p.fecha_pedido, p.subtotal, p.iva, p.id_direccion, de.alias AS dir_alias, de.destinatario AS dir_destinatario, de.telefono AS dir_telefono, de.calle AS dir_calle, de.num_exterior AS dir_num_exterior, de.num_interior AS dir_num_interior, de.colonia AS dir_colonia, de.ciudad AS dir_ciudad, de.estado AS dir_estado, de.codigo_postal AS dir_codigo_postal, de.referencias AS dir_referencias, u.nombre 
                     FROM pedidos p 
                     JOIN usuarios u ON p.id_usuario = u.id_usuario 
+                    LEFT JOIN direcciones_entrega de ON p.id_direccion = de.id_direccion 
                     ORDER BY p.fecha_pedido DESC
                 ");
                 $stmt->execute();
-                $pedidos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $pedidos = array_map('formatearPedidoAdmin', $stmt->fetchAll(PDO::FETCH_ASSOC));
                 
                 http_response_code(200);
                 echo json_encode(['success' => true, 'pedidos' => $pedidos]);
