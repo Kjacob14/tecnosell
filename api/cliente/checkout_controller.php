@@ -35,7 +35,7 @@ try {
     // 1. Obtener los artículos del carrito aplicando un bloqueo exclusivo de fila (FOR UPDATE).
     // El ORDER BY previene interbloqueos (deadlocks) en concurrencia masiva.
     $sqlBloqueo = "
-        SELECT p.id_producto, p.nombre, p.precio, p.stock, p.estado, c.cantidad
+        SELECT p.id_producto, p.nombre, p.precio, p.costo_compra, p.stock, p.estado, c.cantidad
         FROM carrito c
         JOIN productos p ON c.id_producto = p.id_producto
         WHERE c.id_usuario = :id_usuario
@@ -102,7 +102,7 @@ try {
     $idPedido = (int) $pdo->lastInsertId();
 
     // 5. Registrar los detalles (congelando el precio_compra) y descontar el inventario
-    $sqlDetalle = "INSERT INTO detalles_pedido (id_pedido, id_producto, cantidad, precio_compra) VALUES (:id_pedido, :id_producto, :cantidad, :precio_compra)";
+    $sqlDetalle = "INSERT INTO detalles_pedido (id_pedido, id_producto, cantidad, precio_compra, costo_compra) VALUES (:id_pedido, :id_producto, :cantidad, :precio_compra, :costo_compra)";
     $stmtDetalle = $pdo->prepare($sqlDetalle);
 
     $sqlDescuento = "UPDATE productos SET stock = stock - :cantidad WHERE id_producto = :id_producto";
@@ -113,7 +113,8 @@ try {
             ':id_pedido' => $idPedido,
             ':id_producto' => $item['id_producto'],
             ':cantidad' => $item['cantidad'],
-            ':precio_compra' => $item['precio']
+            ':precio_compra' => $item['precio'],
+            ':costo_compra' => $item['costo_compra']
         ]);
 
         $stmtDescuento->execute([
