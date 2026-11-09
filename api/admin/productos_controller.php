@@ -190,6 +190,48 @@ function validarPrecio(mixed $precio): string
 
 
 /**
+ * Valida el costo de compra (opcional: vacío = 0).
+ *
+ * productos.costo_compra = DECIMAL(10,2) NOT NULL DEFAULT 0.00
+ */
+function validarCostoCompra(mixed $costo): string
+{
+    if ($costo === null) {
+        return '0.00';
+    }
+
+    if (is_int($costo) || is_float($costo)) {
+        $costo = (string) $costo;
+    }
+
+    if (!is_string($costo)) {
+        responderJSON(400, [
+            'success' => false,
+            'message' => 'El costo de compra no es válido.'
+        ]);
+    }
+
+    $costo = trim($costo);
+
+    if ($costo === '') {
+        return '0.00';
+    }
+
+    /*
+     * DECIMAL(10,2): máximo permitido 99999999.99, sin negativos.
+     */
+    if (!preg_match('/^\d{1,8}(\.\d{1,2})?$/', $costo)) {
+        responderJSON(400, [
+            'success' => false,
+            'message' => 'El costo de compra no es válido.'
+        ]);
+    }
+
+    return number_format((float) $costo, 2, '.', '');
+}
+
+
+/**
  * Valida el stock.
  *
  * productos.stock = INT NOT NULL DEFAULT 0
@@ -531,6 +573,7 @@ try {
                     p.nombre,
                     p.descripcion,
                     p.precio,
+                    p.costo_compra,
                     p.stock,
                     p.imagen,
                     p.estado
@@ -572,6 +615,7 @@ try {
                     'nombre' => $producto['nombre'],
                     'descripcion' => $producto['descripcion'],
                     'precio' => $producto['precio'],
+                    'costo_compra' => number_format((float) $producto['costo_compra'], 2, '.', ''),
                     'stock' => (int) $producto['stock'],
                     'imagen' => $producto['imagen'],
                     'estado' => (int) $producto['estado']
@@ -596,6 +640,7 @@ try {
                 p.nombre,
                 p.descripcion,
                 p.precio,
+                p.costo_compra,
                 p.stock,
                 p.imagen,
                 p.estado
@@ -626,6 +671,7 @@ try {
                 'nombre' => $producto['nombre'],
                 'descripcion' => $producto['descripcion'],
                 'precio' => $producto['precio'],
+                'costo_compra' => number_format((float) $producto['costo_compra'], 2, '.', ''),
                 'stock' => (int) $producto['stock'],
                 'imagen' => $producto['imagen'],
                 'estado' => (int) $producto['estado']
@@ -658,6 +704,7 @@ try {
         $nombre = validarNombreProducto($_POST['nombre'] ?? null);
         $descripcion = validarDescripcion($_POST['descripcion'] ?? null);
         $precio = validarPrecio($_POST['precio'] ?? null);
+        $costoCompra = validarCostoCompra($_POST['costo_compra'] ?? null);
         $stock = validarStock($_POST['stock'] ?? null);
         $idCategoria = validarIdCategoria($_POST['id_categoria'] ?? null);
         $estado = validarEstado($_POST['estado'] ?? 1);
@@ -699,6 +746,7 @@ try {
                     nombre = :nombre,
                     descripcion = :descripcion,
                     precio = :precio,
+                    costo_compra = :costo_compra,
                     stock = :stock,
                     {$sqlImagen}
                     estado = :estado
@@ -712,6 +760,7 @@ try {
             $stmt->bindValue(':nombre', $nombre, PDO::PARAM_STR);
             $stmt->bindValue(':descripcion', $descripcion, $descripcion === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
             $stmt->bindValue(':precio', $precio, PDO::PARAM_STR);
+            $stmt->bindValue(':costo_compra', $costoCompra, PDO::PARAM_STR);
             $stmt->bindValue(':stock', $stock, PDO::PARAM_INT);
             if (isset($imagenNueva)) {
                 $stmt->bindValue(':imagen', $imagenNueva, PDO::PARAM_STR);
@@ -736,6 +785,7 @@ try {
                     'nombre' => $nombre,
                     'descripcion' => $descripcion,
                     'precio' => $precio,
+                    'costo_compra' => $costoCompra,
                     'stock' => $stock,
                     'imagen' => isset($imagenNueva) ? $imagenNueva : $productoActual['imagen'],
                     'estado' => $estado
@@ -753,6 +803,7 @@ try {
                     nombre,
                     descripcion,
                     precio,
+                    costo_compra,
                     stock,
                     imagen,
                     estado
@@ -763,6 +814,7 @@ try {
                     :nombre,
                     :descripcion,
                     :precio,
+                    :costo_compra,
                     :stock,
                     :imagen,
                     :estado
@@ -776,6 +828,7 @@ try {
             $stmt->bindValue(':nombre', $nombre, PDO::PARAM_STR);
             $stmt->bindValue(':descripcion', $descripcion, $descripcion === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
             $stmt->bindValue(':precio', $precio, PDO::PARAM_STR);
+            $stmt->bindValue(':costo_compra', $costoCompra, PDO::PARAM_STR);
             $stmt->bindValue(':stock', $stock, PDO::PARAM_INT);
             $stmt->bindValue(':imagen', $imagenNueva ?? null, !isset($imagenNueva) ? PDO::PARAM_NULL : PDO::PARAM_STR);
             $stmt->bindValue(':estado', $estado, PDO::PARAM_INT);
@@ -794,6 +847,7 @@ try {
                     'nombre' => $nombre,
                     'descripcion' => $descripcion,
                     'precio' => $precio,
+                    'costo_compra' => $costoCompra,
                     'stock' => $stock,
                     'imagen' => $imagenNueva ?? null,
                     'estado' => $estado

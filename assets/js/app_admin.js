@@ -27,7 +27,8 @@ const ENDPOINTS = {
     categorias: `${API_BASE}/admin/categorias_controller.php`,
     productos: `${API_BASE}/admin/productos_controller.php`,
     proveedores: `${API_BASE}/admin/proveedores_controller.php`,
-    pedidos: `${API_BASE}/admin/pedidos_admin_controller.php`
+    pedidos: `${API_BASE}/admin/pedidos_admin_controller.php`,
+    dashboard: `${API_BASE}/admin/dashboard_controller.php`
 };
 
 // Estado en memoria de categorías, usado para llenar el <select> de productos.
@@ -718,6 +719,7 @@ function inicializarFormularioProducto() {
     document.getElementById('btnNuevoProducto').addEventListener('click', () => {
         formProducto.reset();
         document.getElementById('productoId').value = '';
+        document.getElementById('productoCosto').value = '0';
         document.getElementById('tituloModalProducto').textContent = 'Nuevo producto';
         inputImagen.disabled = false;
         ayudaImagen.textContent = '';
@@ -734,6 +736,7 @@ function inicializarFormularioProducto() {
             document.getElementById('productoNombre').value = producto.nombre;
             document.getElementById('productoDescripcion').value = producto.descripcion || '';
             document.getElementById('productoPrecio').value = producto.precio;
+            document.getElementById('productoCosto').value = producto.costo_compra ?? '0';
             document.getElementById('productoStock').value = producto.stock;
             document.getElementById('productoCategoria').value = producto.id_categoria || '';
             document.getElementById('productoProveedor').value = producto.id_proveedor || '';
@@ -825,6 +828,7 @@ function inicializarFormularioProducto() {
         formData.append('nombre', nombre);
         formData.append('descripcion', descripcion);
         formData.append('precio', precio);
+        formData.append('costo_compra', document.getElementById('productoCosto').value);
         formData.append('stock', stock);
         formData.append('estado', estado);
 
@@ -1024,7 +1028,84 @@ function inicializarPedidos() {
         modalDetalle.hide();
         mostrarAlertaGlobal('Estado del pedido actualizado correctamente.', 'success');
         await cargarPedidos();
+        await cargarDashboard();
     });
+}
+
+
+/* =============================================================
+ * DASHBOARD DE VENTAS Y GANANCIAS
+ * ============================================================= */
+
+async function cargarDashboard() {
+    const selectPeriodo = document.getElementById('dashboardPeriodo');
+    const avisoDashboard = document.getElementById('dashboardAviso');
+    const contenedorBarras = document.getElementById('dashboardMasVendidos');
+
+    if (!selectPeriodo || !contenedorBarras) {
+        return;
+    }
+
+    const { ok, data } = await peticionApi(
+        `${ENDPOINTS.dashboard}?dias=${encodeURIComponent(selectPeriodo.value)}`,
+        { method: 'GET' }
+    );
+
+    if (!ok) {
+        mostrarAlertaGlobal(data.message || 'No fue posible cargar el dashboard.', 'danger');
+        return;
+    }
+
+    const resumen = data.resumen;
+
+    document.getElementById('dashboardIngresos').textContent = formatearMoneda(resumen.ingresos);
+    document.getElementById('dashboardCostos').textContent = formatearMoneda(resumen.costos);
+    document.getElementById('dashboardUtilidad').textContent = formatearMoneda(resumen.utilidad);
+    document.getElementById('dashboardPedidos').textContent = resumen.pedidos;
+
+    if (resumen.pedidos_sin_costo > 0) {
+        mostrarAlerta(
+            avisoDashboard,
+            `Hay ${resumen.pedidos_sin_costo} pedido(s) sin costo registrado: su utilidad aparece más alta de lo real.`,
+            'warning'
+        );
+    } else {
+        ocultarAlerta(avisoDashboard);
+    }
+
+    if (resumen.pedidos === 0 || data.mas_vendidos.length === 0) {
+        contenedorBarras.innerHTML = '<p class="bento-card__texto m-0">Todavía no hay ventas cobradas en este periodo.</p>';
+        return;
+    }
+
+    // La barra más larga (más unidades) mide 100% y las demás son proporcionales.
+    const maximoUnidades = Math.max(...data.mas_vendidos.map((producto) => producto.unidades));
+
+    contenedorBarras.innerHTML = data.mas_vendidos.map((producto) => {
+        const porcentaje = maximoUnidades > 0
+            ? Math.round((producto.unidades / maximoUnidades) * 100)
+            : 0;
+
+        return `
+            <div class="dashboard-barra">
+                <div class="dashboard-barra__nombre">${escaparHtml(producto.nombre)}</div>
+                <div class="dashboard-barra__fondo">
+                    <div class="dashboard-barra__relleno" style="width: ${porcentaje}%"></div>
+                </div>
+                <div class="dashboard-barra__unidades">${escaparHtml(String(producto.unidades))} uds.</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function inicializarDashboard() {
+    const selectPeriodo = document.getElementById('dashboardPeriodo');
+
+    if (!selectPeriodo) {
+        return;
+    }
+
+    selectPeriodo.addEventListener('change', cargarDashboard);
 }
 
 
@@ -1089,11 +1170,13 @@ document.addEventListener('DOMContentLoaded', () => {
         inicializarFormularioProducto();
         inicializarFormularioProveedor();
         inicializarPedidos();
+        inicializarDashboard();
         inicializarConfirmacionGenerica();
 
         cargarCategorias();
         cargarProveedores();
         cargarProductos();
         cargarPedidos();
+        cargarDashboard();
     }
 });

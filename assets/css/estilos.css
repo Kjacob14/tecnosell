@@ -1326,3 +1326,41 @@ img.imagen-respaldo {
     letter-spacing: 0.03em;
     text-transform: uppercase;
 }
+
+
+/* --- Bloque: dashboard-barra (gráfica de barras horizontales) --- */
+
+.dashboard-barra {
+    display: grid;
+    grid-template-columns: minmax(90px, 30%) 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.dashboard-barra__nombre {
+    color: var(--color-texto);
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dashboard-barra__fondo {
+    background-color: var(--superficie-activa);
+    border-radius: 999px;
+    height: 0.75rem;
+    overflow: hidden;
+}
+
+.dashboard-barra__relleno {
+    background-color: var(--color-acento);
+    border-radius: 999px;
+    height: 100%;
+}
+
+.dashboard-barra__unidades {
+    color: var(--color-texto-tenue);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
